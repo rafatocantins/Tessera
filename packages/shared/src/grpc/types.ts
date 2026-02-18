@@ -309,3 +309,81 @@ export interface GrpcStopContainerRequest {
 export interface GrpcStopContainerResponse {
   success: boolean;
 }
+
+// ── Skills Service ────────────────────────────────────────────────────────
+
+export interface GrpcInstallSkillRequest {
+  manifest_json: string;
+  force: boolean;
+}
+
+export interface GrpcInstallSkillResponse {
+  success: boolean;
+  message: string;
+  skill_id: string;
+  skill_version: string;
+  tools_registered: number;
+}
+
+export interface GrpcListSkillsRequest {
+  namespace_filter: string;
+  tag_filter: string;
+}
+
+export interface GrpcSkillSummary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author_name: string;
+  published_at: string;
+  tags: string[];
+  tool_count: number;
+  installed_at: string;
+}
+
+export interface GrpcListSkillsResponse {
+  skills: GrpcSkillSummary[];
+}
+
+export interface GrpcGetSkillRequest {
+  skill_id: string;
+  version: string;
+}
+
+export interface GrpcGetSkillResponse {
+  found: boolean;
+  manifest_json: string;
+  installed_at: string;
+}
+
+export interface GrpcRemoveSkillRequest {
+  skill_id: string;
+  version: string;
+}
+
+export interface GrpcRemoveSkillResponse {
+  success: boolean;
+  message: string;
+  versions_removed: number;
+}
+
+export interface GrpcExecuteSkillToolRequest {
+  skill_id: string;
+  skill_version: string;
+  tool_id: string;
+  input_json: string;
+  call_id: string;
+  session_id: string;
+}
+
+export interface GrpcExecuteSkillToolResponse {
+  call_id: string;
+  success: boolean;
+  stdout: string;
+  stderr: string;
+  exit_code: number;
+  duration_ms: number;
+  timed_out: boolean;
+  oom_killed: boolean;
+}

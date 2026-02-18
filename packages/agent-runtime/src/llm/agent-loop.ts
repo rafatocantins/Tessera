@@ -25,6 +25,7 @@ import type { LLMTool } from "./provider.interface.js";
 import type { VaultGrpcClient } from "../grpc/clients/vault.client.js";
 import type { AuditGrpcClient } from "../grpc/clients/audit.client.js";
 import type { SandboxGrpcClient } from "../grpc/clients/sandbox.client.js";
+import type { SkillsGrpcClient } from "../grpc/clients/skills.client.js";
 
 // Tool definitions exposed to the LLM — must match TOOL_REGISTRY
 const TOOL_DEFINITIONS: LLMTool[] = [
@@ -89,6 +90,13 @@ const TOOL_IMAGES: Record<string, string> = {
   file_write: "secureclaw/file-write:latest",
 };
 
+/** Maps tool_id → { skill_id, skill_version, requires_approval } for skill-backed tools */
+interface SkillToolRoute {
+  skill_id: string;
+  skill_version: string;
+  requires_approval: boolean;
+}
+
 export class AgentLoop {
   constructor(
     private readonly sanitizer: SanitizerService,
@@ -96,7 +104,9 @@ export class AgentLoop {
     private readonly approvalGate: ApprovalGate,
     private readonly vaultClient: VaultGrpcClient,
     private readonly auditClient: AuditGrpcClient,
-    private readonly sandboxClient: SandboxGrpcClient
+    private readonly sandboxClient: SandboxGrpcClient,
+    /** Optional — when absent, only built-in tools are available */
+    private readonly skillsClient?: SkillsGrpcClient
   ) {}
 
   /**
@@ -166,6 +176,44 @@ export class AgentLoop {
     let toolCallsExecuted = 0;
 
     while (continueLoop) {
+      // Load skill tools once per turn (skills can be installed between turns)
+      const skillRoutes = new Map<string, SkillToolRoute>();
+      const skillToolDefs: LLMTool[] = [];
+
+      if (this.skillsClient) {
+        try {
+          const summaries = await this.skillsClient.listSkills();
+          for (const summary of summaries) {
+            // Fetch each skill's full manifest to get tool definitions
+            const skillDetail = await this.skillsClient.getSkill(summary.id, summary.version);
+            if (!skillDetail.found) continue;
+            const manifest = JSON.parse(skillDetail.manifest_json) as {
+              tools?: Array<{
+                tool_id: string;
+                description: string;
+                input_schema: Record<string, unknown>;
+                requires_approval: boolean;
+              }>;
+            };
+            for (const tool of manifest.tools ?? []) {
+              skillRoutes.set(tool.tool_id, {
+                skill_id: summary.id,
+                skill_version: summary.version,
+                requires_approval: tool.requires_approval,
+              });
+              skillToolDefs.push({
+                id: tool.tool_id,
+                description: `[Skill: ${summary.id}] ${tool.description}`,
+                input_schema: tool.input_schema,
+              });
+            }
+          }
+        } catch {
+          // Skills engine unreachable — proceed with built-in tools only
+          process.stderr.write(`[agent-loop] Skills engine unavailable — using built-in tools only\n`);
+        }
+      }
+
       const systemPrompt = buildSecuritySystemPrompt({
         agentName: "SecureClaw",
         sessionId: ctx.session_id,
@@ -174,10 +222,17 @@ export class AgentLoop {
         costCapUsd: 5.0,
       });
 
-      // Only expose tools that the policy engine allows
-      const allowedTools = TOOL_DEFINITIONS.filter((t) =>
+      // Merge: built-in tools (policy-filtered) + skill tools
+      // Skill tools that share a tool_id with a built-in take precedence.
+      const allowedBuiltins = TOOL_DEFINITIONS.filter((t) =>
         this.policyEngine.isAllowed(t.id)
       );
+      const builtinIds = new Set(allowedBuiltins.map((t) => t.id));
+      const allowedTools = [
+        ...allowedBuiltins,
+        // Add skill tools that don't shadow built-ins
+        ...skillToolDefs.filter((t) => !builtinIds.has(t.id)),
+      ];
 
       let accumulatedText = "";
       let hadToolCallsThisTurn = false;
@@ -290,8 +345,7 @@ export class AgentLoop {
             };
           }
 
-          // Execute the tool via sandbox
-          const image = TOOL_IMAGES[tool_id] ?? `secureclaw/${tool_id}:latest`;
+          // Execute the tool — route to skills engine or built-in sandbox
           let toolInputJson = JSON.stringify(input);
 
           // Inject credentials — vault replaces __VAULT_REF:id__ placeholders
@@ -301,11 +355,19 @@ export class AgentLoop {
             // No credentials to inject — use input as-is
           }
 
+          const skillRoute = skillRoutes.get(tool_id);
+          const image = TOOL_IMAGES[tool_id] ?? `secureclaw/${tool_id}:latest`;
+
           this.auditClient.logEvent({
             event_type: "TOOL_CALL",
             session_id: ctx.session_id,
             user_id: ctx.user_id,
-            payload: { call_id, tool_id, image, input_preview: inputPreview },
+            payload: {
+              call_id,
+              tool_id,
+              image: skillRoute ? `skill:${skillRoute.skill_id}@${skillRoute.skill_version}` : image,
+              input_preview: inputPreview,
+            },
             severity: "INFO",
           });
 
@@ -314,6 +376,50 @@ export class AgentLoop {
           let toolSuccess = false;
 
           try {
+            // Skill tool: delegate to skills-engine gRPC
+            if (skillRoute && this.skillsClient) {
+              const result = await this.skillsClient.executeSkillTool({
+                skill_id: skillRoute.skill_id,
+                skill_version: skillRoute.skill_version,
+                tool_id,
+                input_json: toolInputJson,
+                call_id,
+                session_id: ctx.session_id,
+              });
+              const durationMs = Date.now() - startMs;
+              toolSuccess = result.success;
+              toolResult = result.timed_out
+                ? `[TIMEOUT after ${durationMs}ms]`
+                : result.stdout || result.stderr || `[Exit code: ${result.exit_code}]`;
+
+              this.auditClient.logEvent({
+                event_type: "TOOL_RESULT",
+                session_id: ctx.session_id,
+                user_id: ctx.user_id,
+                payload: {
+                  call_id,
+                  tool_id,
+                  skill_id: skillRoute.skill_id,
+                  exit_code: result.exit_code,
+                  duration_ms: durationMs,
+                  timed_out: result.timed_out,
+                  oom_killed: result.oom_killed,
+                  success: toolSuccess,
+                },
+                severity: toolSuccess ? "INFO" : "WARN",
+              });
+
+              yield {
+                tool_result: {
+                  call_id,
+                  tool_id,
+                  success: toolSuccess,
+                  duration_ms: durationMs,
+                  error_message: toolSuccess ? "" : result.stderr,
+                },
+              };
+            } else {
+            // Built-in tool: execute via sandbox directly
             const result = await this.sandboxClient.runTool({
               call_id,
               tool_id,
@@ -357,6 +463,7 @@ export class AgentLoop {
                 error_message: toolSuccess ? "" : result.stderr,
               },
             };
+            } // end else (built-in tool)
           } catch (err) {
             const durationMs = Date.now() - startMs;
             toolResult = `[SANDBOX ERROR: ${err instanceof Error ? err.message : String(err)}]`;

@@ -17,6 +17,7 @@ networks:
 volumes:
   vault-data:
   audit-data:
+  skills-data:
 
 services:
   gateway:
@@ -45,6 +46,12 @@ services:
     environment:
       NODE_ENV: development
       VAULT_MASTER_KEY: "dev-insecure-vault-key-change-in-prod"
+
+  skills-engine:
+    environment:
+      NODE_ENV: development
+      SECURECLAW_LOG_LEVEL: debug
+      SKILLS_REGISTRY_PATH: /data/skills/registry.json
 
   sandbox-runtime:
     environment:

@@ -328,6 +328,12 @@ importers:
 
   packages/skills-engine:
     dependencies:
+      '@grpc/grpc-js':
+        specifier: ^1.14.3
+        version: 1.14.3
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
       '@secureclaw/shared':
         specifier: workspace:*
         version: link:../shared

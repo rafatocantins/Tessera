@@ -5,6 +5,7 @@ export * from "./schemas/tool.schema.js";
 export * from "./schemas/audit.schema.js";
 export * from "./schemas/credential.schema.js";
 export * from "./schemas/message.schema.js";
+export * from "./schemas/skill.schema.js";
 
 // Errors
 export * from "./errors/index.js";

@@ -1,0 +1,132 @@
+syntax = "proto3";
+package secureclaw.skills.v1;
+
+// SkillsService: versioned, signed tool bundle management.
+//
+// A skill is a package containing one or more sandboxed tool definitions,
+// each backed by an OCI image with a pinned sha256 digest.
+// All manifests are verified with Ed25519 before install.
+service SkillsService {
+  // Install a skill from a signed manifest JSON string.
+  // Verifies the Ed25519 signature, checks image digests are pinned,
+  // rejects duplicate (id, version) pairs.
+  rpc InstallSkill(InstallSkillRequest) returns (InstallSkillResponse);
+
+  // List all installed skills, optionally filtered by namespace or tag.
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
+
+  // Return the full manifest for a single installed skill.
+  rpc GetSkill(GetSkillRequest) returns (GetSkillResponse);
+
+  // Remove a skill from the registry.
+  // Any agent-loop tool definitions derived from this skill are invalidated.
+  rpc RemoveSkill(RemoveSkillRequest) returns (RemoveSkillResponse);
+
+  // Execute a specific tool from an installed skill.
+  // The skills engine delegates to sandbox-runtime for actual execution.
+  rpc ExecuteSkillTool(ExecuteSkillToolRequest) returns (ExecuteSkillToolResponse);
+}
+
+// ── Install ───────────────────────────────────────────────────────────────
+
+message InstallSkillRequest {
+  // Full skill manifest JSON (the signed document including `signature` field).
+  // Skills engine parses, validates schema, and verifies Ed25519 before storing.
+  string manifest_json = 1;
+
+  // If true, replace an existing install with the same (id, version).
+  // Default: false — duplicate installs are rejected.
+  bool force = 2;
+}
+
+message InstallSkillResponse {
+  bool success = 1;
+  // Human-readable result or error detail.
+  string message = 2;
+  // The installed skill's id and version (echoed back on success).
+  string skill_id = 3;
+  string skill_version = 4;
+  // Number of tools registered by this install.
+  int32 tools_registered = 5;
+}
+
+// ── List ──────────────────────────────────────────────────────────────────
+
+message ListSkillsRequest {
+  // Optional namespace prefix filter, e.g. "secureclaw".
+  string namespace_filter = 1;
+  // Optional tag filter — skill must have this tag to appear.
+  string tag_filter = 2;
+}
+
+message SkillSummary {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string description = 4;
+  string author_name = 5;
+  string published_at = 6;
+  repeated string tags = 7;
+  int32 tool_count = 8;
+  // ISO-8601 datetime when this skill was installed locally.
+  string installed_at = 9;
+}
+
+message ListSkillsResponse {
+  repeated SkillSummary skills = 1;
+}
+
+// ── Get ───────────────────────────────────────────────────────────────────
+
+message GetSkillRequest {
+  // "namespace/name" skill id.
+  string skill_id = 1;
+  // Exact version. If omitted, returns the latest installed version.
+  string version = 2;
+}
+
+message GetSkillResponse {
+  bool found = 1;
+  // Full manifest JSON as stored (including signature).
+  string manifest_json = 2;
+  string installed_at = 3;
+}
+
+// ── Remove ────────────────────────────────────────────────────────────────
+
+message RemoveSkillRequest {
+  string skill_id = 1;
+  // If blank, removes ALL versions of this skill.
+  string version = 2;
+}
+
+message RemoveSkillResponse {
+  bool success = 1;
+  string message = 2;
+  int32 versions_removed = 3;
+}
+
+// ── Execute ───────────────────────────────────────────────────────────────
+
+message ExecuteSkillToolRequest {
+  string skill_id = 1;
+  string skill_version = 2;
+  string tool_id = 3;
+  // Tool input as JSON; credentials must have been injected by vault beforehand.
+  string input_json = 4;
+  // Call ID from the agent loop (for correlation in audit logs).
+  string call_id = 5;
+  // Session ID for audit log attribution.
+  string session_id = 6;
+}
+
+message ExecuteSkillToolResponse {
+  string call_id = 1;
+  bool success = 2;
+  string stdout = 3;
+  string stderr = 4;
+  int32 exit_code = 5;
+  int32 duration_ms = 6;
+  bool timed_out = 7;
+  bool oom_killed = 8;
+}

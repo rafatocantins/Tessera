@@ -25,6 +25,7 @@ if (isMain) {
   const { VaultGrpcClient } = await import("./grpc/clients/vault.client.js");
   const { AuditGrpcClient } = await import("./grpc/clients/audit.client.js");
   const { SandboxGrpcClient } = await import("./grpc/clients/sandbox.client.js");
+  const { SkillsGrpcClient } = await import("./grpc/clients/skills.client.js");
   const { startAgentGrpcServer: start } = await import("./grpc/server.js");
 
   // Build default tool allowlist: shell_exec, http_request, file_read, file_write
@@ -56,8 +57,9 @@ if (isMain) {
   const vaultClient = new VaultGrpcClient();
   const auditClient = new AuditGrpcClient();
   const sandboxClient = new SandboxGrpcClient();
+  const skillsClient = new SkillsGrpcClient();
 
-  const agentLoop = new Loop(sanitizer, policyEngine, sessionManager.approvalGate, vaultClient, auditClient, sandboxClient);
+  const agentLoop = new Loop(sanitizer, policyEngine, sessionManager.approvalGate, vaultClient, auditClient, sandboxClient, skillsClient);
 
   await start(sessionManager, agentLoop);
   process.stdout.write("[agent-runtime] Service ready\n");
