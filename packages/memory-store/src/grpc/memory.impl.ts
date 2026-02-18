@@ -1,0 +1,158 @@
+/**
+ * memory.impl.ts — MemoryService gRPC handler implementations.
+ *
+ * Delegates all calls to the MemoryService class (SQLite-backed).
+ * All handlers are wrapped in try/catch — errors go to stderr and return
+ * safe defaults so that memory failures never crash the agent runtime.
+ */
+import type * as grpc from "@grpc/grpc-js";
+import type { MemoryService } from "../memory.service.js";
+import type {
+  GrpcStoreSessionRequest,
+  GrpcStoreSessionResponse,
+  GrpcAppendMessageRequest,
+  GrpcAppendMessageResponse,
+  GrpcFinalizeSessionRequest,
+  GrpcFinalizeSessionResponse,
+  GrpcGetRecentMessagesRequest,
+  GrpcGetRecentMessagesResponse,
+  GrpcSearchMessagesRequest,
+  GrpcStoredMessage,
+  GrpcDeleteUserDataRequest,
+  GrpcDeleteUserDataResponse,
+} from "@secureclaw/shared";
+
+type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
+type StreamCall<Req, Res> = grpc.ServerWritableStream<Req, Res>;
+type Callback<Res> = grpc.sendUnaryData<Res>;
+
+export function makeMemoryImpl(memorySvc: MemoryService) {
+  return {
+    StoreSession(
+      call: UnaryCall<GrpcStoreSessionRequest, GrpcStoreSessionResponse>,
+      callback: Callback<GrpcStoreSessionResponse>
+    ): void {
+      try {
+        const req = call.request;
+        memorySvc.storeSession({
+          session_id: req.session_id,
+          user_id: req.user_id,
+          provider: req.provider ?? "",
+          created_at: req.created_at || Date.now(),
+        });
+        callback(null, { success: true });
+      } catch (err) {
+        process.stderr.write(`[memory-grpc] storeSession error: ${String(err)}\n`);
+        callback(null, { success: false });
+      }
+    },
+
+    AppendMessage(
+      call: UnaryCall<GrpcAppendMessageRequest, GrpcAppendMessageResponse>,
+      callback: Callback<GrpcAppendMessageResponse>
+    ): void {
+      try {
+        const req = call.request;
+        const messageId = memorySvc.appendMessage({
+          session_id: req.session_id,
+          user_id: req.user_id,
+          role: req.role,
+          content: req.content ?? "",
+          tool_calls_json: req.tool_calls_json ?? "",
+          tool_call_id: req.tool_call_id ?? "",
+          tool_name: req.tool_name ?? "",
+          created_at: req.created_at || Date.now(),
+        });
+        callback(null, { message_id: messageId, success: true });
+      } catch (err) {
+        process.stderr.write(`[memory-grpc] appendMessage error: ${String(err)}\n`);
+        callback(null, { message_id: 0, success: false });
+      }
+    },
+
+    FinalizeSession(
+      call: UnaryCall<GrpcFinalizeSessionRequest, GrpcFinalizeSessionResponse>,
+      callback: Callback<GrpcFinalizeSessionResponse>
+    ): void {
+      try {
+        const req = call.request;
+        memorySvc.finalizeSession({
+          session_id: req.session_id,
+          ended_at: req.ended_at || Date.now(),
+          input_tokens: req.input_tokens ?? 0,
+          output_tokens: req.output_tokens ?? 0,
+          cost_usd: req.cost_usd ?? 0,
+          tool_call_count: req.tool_call_count ?? 0,
+        });
+        callback(null, { success: true });
+      } catch (err) {
+        process.stderr.write(`[memory-grpc] finalizeSession error: ${String(err)}\n`);
+        callback(null, { success: false });
+      }
+    },
+
+    GetRecentMessages(
+      call: UnaryCall<GrpcGetRecentMessagesRequest, GrpcGetRecentMessagesResponse>,
+      callback: Callback<GrpcGetRecentMessagesResponse>
+    ): void {
+      try {
+        const { user_id, limit } = call.request;
+        const messages = memorySvc.getRecentMessages(user_id, limit || 30);
+        const grpcMessages: GrpcStoredMessage[] = messages.map((m) => ({
+          id: m.id,
+          session_id: m.session_id,
+          user_id: m.user_id,
+          role: m.role,
+          content: m.content,
+          tool_calls_json: m.tool_calls_json,
+          tool_call_id: m.tool_call_id,
+          tool_name: m.tool_name,
+          created_at: m.created_at,
+        }));
+        callback(null, { messages: grpcMessages });
+      } catch (err) {
+        process.stderr.write(`[memory-grpc] getRecentMessages error: ${String(err)}\n`);
+        callback(null, { messages: [] });
+      }
+    },
+
+    SearchMessages(
+      call: StreamCall<GrpcSearchMessagesRequest, GrpcStoredMessage>
+    ): void {
+      try {
+        const { user_id, query, limit } = call.request;
+        const messages = memorySvc.searchMessages(user_id, query, limit || 20);
+        for (const m of messages) {
+          call.write({
+            id: m.id,
+            session_id: m.session_id,
+            user_id: m.user_id,
+            role: m.role,
+            content: m.content,
+            tool_calls_json: m.tool_calls_json,
+            tool_call_id: m.tool_call_id,
+            tool_name: m.tool_name,
+            created_at: m.created_at,
+          });
+        }
+        call.end();
+      } catch (err) {
+        process.stderr.write(`[memory-grpc] searchMessages error: ${String(err)}\n`);
+        call.destroy(err instanceof Error ? err : new Error(String(err)));
+      }
+    },
+
+    DeleteUserData(
+      call: UnaryCall<GrpcDeleteUserDataRequest, GrpcDeleteUserDataResponse>,
+      callback: Callback<GrpcDeleteUserDataResponse>
+    ): void {
+      try {
+        const deletedCount = memorySvc.deleteUserData(call.request.user_id);
+        callback(null, { deleted_count: deletedCount, success: true });
+      } catch (err) {
+        process.stderr.write(`[memory-grpc] deleteUserData error: ${String(err)}\n`);
+        callback(null, { deleted_count: 0, success: false });
+      }
+    },
+  };
+}

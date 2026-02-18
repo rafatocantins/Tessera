@@ -26,6 +26,7 @@ import type { VaultGrpcClient } from "../grpc/clients/vault.client.js";
 import type { AuditGrpcClient } from "../grpc/clients/audit.client.js";
 import type { SandboxGrpcClient } from "../grpc/clients/sandbox.client.js";
 import type { SkillsGrpcClient } from "../grpc/clients/skills.client.js";
+import type { MemoryGrpcClient, StoredMemoryMessage } from "../grpc/clients/memory.client.js";
 
 // Tool definitions exposed to the LLM — must match TOOL_REGISTRY
 const TOOL_DEFINITIONS: LLMTool[] = [
@@ -106,7 +107,9 @@ export class AgentLoop {
     private readonly auditClient: AuditGrpcClient,
     private readonly sandboxClient: SandboxGrpcClient,
     /** Optional — when absent, only built-in tools are available */
-    private readonly skillsClient?: SkillsGrpcClient
+    private readonly skillsClient?: SkillsGrpcClient,
+    /** Optional — when absent, conversation history is not persisted across sessions */
+    private readonly memoryClient?: MemoryGrpcClient
   ) {}
 
   /**
@@ -158,7 +161,44 @@ export class AgentLoop {
       process.stderr.write(`[agent-loop] Could not check cost cap for user ${ctx.user_id} — proceeding\n`);
     }
 
+    // ── Memory: load prior conversation history on first turn ─────────────────
+    if (this.memoryClient && ctx.messages.length === 0) {
+      // Register session (fire-and-forget — must happen before appendMessage calls)
+      this.memoryClient.storeSession(ctx);
+
+      // Fetch prior messages — 2-second timeout, resolves [] if memory is down
+      const prior = await this.memoryClient.getRecentMessages(ctx.user_id, 30);
+      if (prior.length > 0) {
+        for (const m of prior as StoredMemoryMessage[]) {
+          if (m.role === "user") {
+            ctx.messages.push({ role: "user", content: m.content });
+          } else if (m.role === "assistant") {
+            ctx.messages.push({
+              role: "assistant",
+              content: m.content,
+              tool_calls:
+                m.tool_calls_json
+                  ? JSON.parse(m.tool_calls_json) as Array<{ call_id: string; tool_id: string; input: Record<string, unknown> }>
+                  : undefined,
+            });
+          } else if (m.role === "tool") {
+            ctx.messages.push({
+              role: "tool",
+              content: m.content,
+              tool_call_id: m.tool_call_id,
+              tool_name: m.tool_name,
+            });
+          }
+        }
+      }
+    }
+
     addUserMessage(ctx, sanitizeResult.safe_content);
+    // Memory: persist the user message (fire-and-forget)
+    this.memoryClient?.appendMessage(ctx.session_id, ctx.user_id, {
+      role: "user",
+      content: sanitizeResult.safe_content,
+    });
     ctx.status = "active";
 
     this.auditClient.logEvent({
@@ -511,9 +551,22 @@ export class AgentLoop {
           accumulatedText,
           toolCallsThisTurn.length > 0 ? toolCallsThisTurn : undefined
         );
+        // Memory: persist assistant message (fire-and-forget)
+        this.memoryClient?.appendMessage(ctx.session_id, ctx.user_id, {
+          role: "assistant",
+          content: accumulatedText,
+          tool_calls: toolCallsThisTurn.length > 0 ? toolCallsThisTurn : undefined,
+        });
       }
       for (const tr of toolResultsBuffer) {
         addToolResult(ctx, tr.call_id, tr.tool_id, tr.result);
+        // Memory: persist tool result (fire-and-forget)
+        this.memoryClient?.appendMessage(ctx.session_id, ctx.user_id, {
+          role: "tool",
+          content: tr.result,
+          tool_call_id: tr.call_id,
+          tool_name: tr.tool_id,
+        });
       }
 
       // If no tool calls were made this turn, we're done
@@ -551,6 +604,9 @@ export class AgentLoop {
     });
 
     ctx.status = "idle";
+
+    // Memory: finalize session with final token/cost counts (fire-and-forget)
+    this.memoryClient?.finalizeSession(ctx);
 
     yield {
       complete: {

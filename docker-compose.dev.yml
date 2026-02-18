@@ -18,6 +18,7 @@ volumes:
   vault-data:
   audit-data:
   skills-data:
+  memory-data:
 
 services:
   gateway:
@@ -41,6 +42,7 @@ services:
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://host.docker.internal:11434}"
+      MEMORY_ADDR: "memory-store:19006"
 
   credential-vault:
     environment:
@@ -53,8 +55,27 @@ services:
       SECURECLAW_LOG_LEVEL: debug
       SKILLS_REGISTRY_PATH: /data/skills/registry.json
 
+  memory-store:
+    environment:
+      NODE_ENV: development
+      MEMORY_DATA_DIR: /data/memory
+      SECURECLAW_LOG_LEVEL: debug
+
   sandbox-runtime:
     environment:
       NODE_ENV: development
       SECURECLAW_ALLOW_RUNC: "true"    # dev escape hatch: skip gVisor check
       LOG_LEVEL: debug
+
+  channel-telegram:
+    environment:
+      NODE_ENV: development
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      SECURECLAW_LOG_LEVEL: debug
+
+  channel-slack:
+    environment:
+      NODE_ENV: development
+      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
+      SLACK_APP_TOKEN: "${SLACK_APP_TOKEN:-}"
+      SECURECLAW_LOG_LEVEL: debug

@@ -1,0 +1,77 @@
+import type Database from "better-sqlite3";
+
+/**
+ * Initialize the memory-store SQLite schema.
+ * Safe to call multiple times — all statements use IF NOT EXISTS.
+ *
+ * Tables:
+ *   sessions  — one row per agent session (mutable: finalised on close)
+ *   messages  — conversation history (append-only in practice; cascade deletes for GDPR)
+ *
+ * FTS5:
+ *   messages_fts — external-content FTS5 index over messages.content
+ *   Triggers keep the index in sync after INSERT and DELETE on messages.
+ */
+export function initSchema(db: Database.Database): void {
+  db.exec(`
+    -- =========================================================================
+    -- sessions
+    -- =========================================================================
+    CREATE TABLE IF NOT EXISTS sessions (
+      id              TEXT PRIMARY KEY,
+      user_id         TEXT NOT NULL,
+      provider        TEXT NOT NULL DEFAULT '',
+      created_at      INTEGER NOT NULL,
+      ended_at        INTEGER,
+      input_tokens    INTEGER NOT NULL DEFAULT 0,
+      output_tokens   INTEGER NOT NULL DEFAULT 0,
+      cost_usd        REAL    NOT NULL DEFAULT 0.0,
+      tool_call_count INTEGER NOT NULL DEFAULT 0
+    ) STRICT;
+
+    CREATE INDEX IF NOT EXISTS idx_sessions_user
+      ON sessions(user_id);
+
+    -- =========================================================================
+    -- messages
+    -- =========================================================================
+    CREATE TABLE IF NOT EXISTS messages (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id      TEXT    NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      user_id         TEXT    NOT NULL,
+      role            TEXT    NOT NULL CHECK(role IN ('user', 'assistant', 'tool')),
+      content         TEXT    NOT NULL DEFAULT '',
+      tool_calls_json TEXT    NOT NULL DEFAULT '',
+      tool_call_id    TEXT    NOT NULL DEFAULT '',
+      tool_name       TEXT    NOT NULL DEFAULT '',
+      created_at      INTEGER NOT NULL
+    ) STRICT;
+
+    CREATE INDEX IF NOT EXISTS idx_messages_user_time
+      ON messages(user_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_messages_session
+      ON messages(session_id);
+
+    -- =========================================================================
+    -- FTS5 full-text index (external content table)
+    -- =========================================================================
+    CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
+      USING fts5(content, content=messages, content_rowid=id);
+
+    -- Keep FTS in sync after inserts
+    CREATE TRIGGER IF NOT EXISTS messages_fts_insert
+      AFTER INSERT ON messages
+    BEGIN
+      INSERT INTO messages_fts(rowid, content) VALUES (new.id, new.content);
+    END;
+
+    -- Keep FTS in sync after deletes (required for external-content tables)
+    CREATE TRIGGER IF NOT EXISTS messages_fts_delete
+      AFTER DELETE ON messages
+    BEGIN
+      INSERT INTO messages_fts(messages_fts, rowid, content)
+        VALUES ('delete', old.id, old.content);
+    END;
+  `);
+}

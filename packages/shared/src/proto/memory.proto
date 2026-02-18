@@ -1,0 +1,96 @@
+syntax = "proto3";
+package secureclaw.memory.v1;
+
+// MemoryService: persistent conversation memory across sessions.
+// Stores messages per user/session; supports FTS5 keyword search.
+// All write operations are fire-and-forget from the agent-runtime perspective.
+service MemoryService {
+  // Upsert session metadata — idempotent, safe to call multiple times
+  rpc StoreSession(StoreSessionRequest) returns (StoreSessionResponse);
+  // Append a single message to the session's history
+  rpc AppendMessage(AppendMessageRequest) returns (AppendMessageResponse);
+  // Finalize a session — sets ended_at and final token/cost counts
+  rpc FinalizeSession(FinalizeSessionRequest) returns (FinalizeSessionResponse);
+  // Load the N most recent messages for a user (across all sessions)
+  rpc GetRecentMessages(GetRecentMessagesRequest) returns (GetRecentMessagesResponse);
+  // FTS5 keyword search over a user's message history
+  rpc SearchMessages(SearchMessagesRequest) returns (stream StoredMessage);
+  // GDPR-style deletion — removes all sessions and messages for a user
+  rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
+}
+
+message StoreSessionRequest {
+  string session_id = 1;
+  string user_id    = 2;
+  string provider   = 3;
+  int64  created_at = 4;  // unix ms
+}
+
+message StoreSessionResponse {
+  bool success = 1;
+}
+
+message AppendMessageRequest {
+  string session_id      = 1;
+  string user_id         = 2;
+  string role            = 3;  // "user" | "assistant" | "tool"
+  string content         = 4;
+  string tool_calls_json = 5;  // JSON-encoded tool_calls array; "" if none
+  string tool_call_id    = 6;  // Only for role="tool"
+  string tool_name       = 7;  // Only for role="tool"
+  int64  created_at      = 8;  // unix ms; server uses Date.now() if 0
+}
+
+message AppendMessageResponse {
+  int64 message_id = 1;
+  bool  success    = 2;
+}
+
+message FinalizeSessionRequest {
+  string session_id      = 1;
+  int64  ended_at        = 2;  // unix ms
+  int64  input_tokens    = 3;
+  int64  output_tokens   = 4;
+  double cost_usd        = 5;
+  int64  tool_call_count = 6;
+}
+
+message FinalizeSessionResponse {
+  bool success = 1;
+}
+
+message StoredMessage {
+  int64  id             = 1;
+  string session_id     = 2;
+  string user_id        = 3;
+  string role           = 4;
+  string content        = 5;
+  string tool_calls_json = 6;
+  string tool_call_id   = 7;
+  string tool_name      = 8;
+  int64  created_at     = 9;  // unix ms
+}
+
+message GetRecentMessagesRequest {
+  string user_id = 1;
+  int32  limit   = 2;  // default 30; server applies max cap of 100
+}
+
+message GetRecentMessagesResponse {
+  repeated StoredMessage messages = 1;  // in chronological order (oldest first)
+}
+
+message SearchMessagesRequest {
+  string user_id = 1;
+  string query   = 2;  // FTS5 MATCH query
+  int32  limit   = 3;  // default 20
+}
+
+message DeleteUserDataRequest {
+  string user_id = 1;
+}
+
+message DeleteUserDataResponse {
+  int64 deleted_count = 1;  // number of messages deleted
+  bool  success       = 2;
+}

@@ -28,6 +28,7 @@ Thumbs.db
 .claude/
 .zencoder/
 .zenflow/
+.mcp.json
 
 # Logs
 logs/

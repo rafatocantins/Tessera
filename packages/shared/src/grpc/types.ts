@@ -387,3 +387,81 @@ export interface GrpcExecuteSkillToolResponse {
   timed_out: boolean;
   oom_killed: boolean;
 }
+
+// ── Memory Service ────────────────────────────────────────────────────────
+
+export interface GrpcStoreSessionRequest {
+  session_id: string;
+  user_id: string;
+  provider: string;
+  created_at: number;
+}
+
+export interface GrpcStoreSessionResponse {
+  success: boolean;
+}
+
+export interface GrpcAppendMessageRequest {
+  session_id: string;
+  user_id: string;
+  role: string;
+  content: string;
+  tool_calls_json: string;
+  tool_call_id: string;
+  tool_name: string;
+  created_at: number;
+}
+
+export interface GrpcAppendMessageResponse {
+  message_id: number;
+  success: boolean;
+}
+
+export interface GrpcFinalizeSessionRequest {
+  session_id: string;
+  ended_at: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  tool_call_count: number;
+}
+
+export interface GrpcFinalizeSessionResponse {
+  success: boolean;
+}
+
+export interface GrpcStoredMessage {
+  id: number;
+  session_id: string;
+  user_id: string;
+  role: string;
+  content: string;
+  tool_calls_json: string;
+  tool_call_id: string;
+  tool_name: string;
+  created_at: number;
+}
+
+export interface GrpcGetRecentMessagesRequest {
+  user_id: string;
+  limit: number;
+}
+
+export interface GrpcGetRecentMessagesResponse {
+  messages: GrpcStoredMessage[];
+}
+
+export interface GrpcSearchMessagesRequest {
+  user_id: string;
+  query: string;
+  limit: number;
+}
+
+export interface GrpcDeleteUserDataRequest {
+  user_id: string;
+}
+
+export interface GrpcDeleteUserDataResponse {
+  deleted_count: number;
+  success: boolean;
+}
