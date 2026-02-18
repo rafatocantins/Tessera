@@ -1,0 +1,136 @@
+syntax = "proto3";
+package secureclaw.audit.v1;
+
+// AuditService: immutable append-only audit log.
+// CRITICAL: No update or delete methods exist. Append-only enforced at DB layer.
+service AuditService {
+  // Log an event — always succeeds or retries (audit is critical path)
+  rpc LogEvent(LogEventRequest) returns (LogEventResponse);
+  // Stream historical events matching a query
+  rpc QueryEvents(QueryEventsRequest) returns (stream AuditEvent);
+  // Get active (unacknowledged) alerts
+  rpc GetAlerts(GetAlertsRequest) returns (GetAlertsResponse);
+  // Acknowledge an alert
+  rpc AcknowledgeAlert(AcknowledgeAlertRequest) returns (AcknowledgeAlertResponse);
+  // Export events as JSON (for SIEM integration)
+  rpc ExportJSON(ExportRequest) returns (stream ExportChunk);
+  // Get cost summary for a user/day
+  rpc GetCostSummary(GetCostSummaryRequest) returns (GetCostSummaryResponse);
+  // Record per-turn token usage to the cost ledger
+  rpc RecordCost(RecordCostRequest) returns (RecordCostResponse);
+}
+
+enum EventType {
+  TOOL_CALL = 0;
+  TOOL_RESULT = 1;
+  SESSION_START = 2;
+  SESSION_END = 3;
+  INJECTION_DETECTED = 4;
+  POLICY_DENIED = 5;
+  AUTH_FAILED = 6;
+  COST_CAP_EXCEEDED = 7;
+  COST_CAP_WARNING = 8;
+  APPROVAL_REQUESTED = 9;
+  APPROVAL_GRANTED = 10;
+  APPROVAL_DENIED = 11;
+  APPROVAL_TIMEOUT = 12;
+  PLAINTEXT_SECRET_DETECTED = 13;
+  SANDBOX_ERROR = 14;
+}
+
+message LogEventRequest {
+  EventType event_type = 1;
+  string session_id = 2;
+  string user_id = 3;
+  string payload_json = 4;  // JSON blob with event-specific data
+  string severity = 5;      // "INFO" | "WARN" | "ERROR" | "CRITICAL"
+}
+
+message LogEventResponse {
+  int64 event_id = 1;
+  bool success = 2;
+}
+
+message QueryEventsRequest {
+  string session_id = 1;      // Filter by session (empty = all sessions)
+  int64 from_unix_ms = 2;
+  int64 to_unix_ms = 3;
+  repeated EventType event_types = 4;  // Empty = all types
+  int32 limit = 5;            // Max results (default 100)
+}
+
+message AuditEvent {
+  int64 id = 1;
+  EventType event_type = 2;
+  string session_id = 3;
+  string user_id = 4;
+  string payload_json = 5;
+  string severity = 6;
+  int64 created_at_unix_ms = 7;
+}
+
+message GetAlertsRequest {
+  bool include_acknowledged = 1;
+  string session_id = 2;  // Empty = all sessions
+}
+
+message GetAlertsResponse {
+  repeated Alert alerts = 1;
+}
+
+message Alert {
+  int64 id = 1;
+  string rule_id = 2;
+  string severity = 3;
+  string session_id = 4;
+  string message = 5;
+  string context_json = 6;
+  int64 created_at_unix_ms = 7;
+  bool acknowledged = 8;
+}
+
+message AcknowledgeAlertRequest {
+  int64 alert_id = 1;
+}
+
+message AcknowledgeAlertResponse {
+  bool success = 1;
+}
+
+message ExportRequest {
+  int64 from_unix_ms = 1;
+  int64 to_unix_ms = 2;
+  string format = 3;  // "json" | "json-lines"
+}
+
+message ExportChunk {
+  bytes data = 1;
+  bool is_last = 2;
+}
+
+message GetCostSummaryRequest {
+  string user_id = 1;
+  int64 day_unix_ms = 2;  // Any timestamp within the day
+}
+
+message GetCostSummaryResponse {
+  double total_cost_usd = 1;
+  double cap_usd = 2;
+  double remaining_usd = 3;
+  bool cap_exceeded = 4;
+  map<string, double> cost_by_model = 5;
+}
+
+message RecordCostRequest {
+  string session_id = 1;
+  string user_id = 2;
+  string provider = 3;
+  string model = 4;
+  int64 input_tokens = 5;
+  int64 output_tokens = 6;
+  double cost_usd = 7;
+}
+
+message RecordCostResponse {
+  bool success = 1;
+}

@@ -1,0 +1,53 @@
+version: "3.9"
+
+# SecureClaw Development Compose — extends docker-compose.yml
+# Overrides for local development:
+# - SECURECLAW_ALLOW_RUNC=true (skip gVisor check if not installed)
+# - Hot reload via volume mounts (source mapped in)
+# - Relaxed security for DX (still no 0.0.0.0 gateway exposure)
+# - Verbose logging
+
+networks:
+  secureclaw-net:
+    driver: bridge
+    internal: false          # allow outbound for package installs in dev
+  gateway-net:
+    driver: bridge
+
+volumes:
+  vault-data:
+  audit-data:
+
+services:
+  gateway:
+    build:
+      target: build          # stop at build stage for dev
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      GATEWAY_HMAC_SECRET: "dev-insecure-hmac-secret-change-in-prod"
+    volumes:
+      - ./packages/gateway/src:/app/packages/gateway/src:ro
+      - ./packages/shared/src:/app/packages/shared/src:ro
+    read_only: false
+    command: ["node", "--watch", "packages/gateway/dist/index.js"]
+
+  agent-runtime:
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://host.docker.internal:11434}"
+
+  credential-vault:
+    environment:
+      NODE_ENV: development
+      VAULT_MASTER_KEY: "dev-insecure-vault-key-change-in-prod"
+
+  sandbox-runtime:
+    environment:
+      NODE_ENV: development
+      SECURECLAW_ALLOW_RUNC: "true"    # dev escape hatch: skip gVisor check
+      LOG_LEVEL: debug

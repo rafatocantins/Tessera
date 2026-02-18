@@ -1,0 +1,50 @@
+{
+  "version": "1",
+  "security": {
+    "sandbox_mode": "always_on",
+    "tool_policy": "deny_all_except_allowlist",
+    "gateway_bind": "loopback_only",
+    "gateway_auth": "required_always",
+    "credential_storage": "os_native_vault",
+    "session_isolation": "strict",
+    "cost_cap_daily_usd": 5.0,
+    "audit_logging": "all_tool_calls",
+    "telemetry": "off",
+    "injection_detection": "both",
+    "human_approval_required_for": [
+      "file_write",
+      "file_delete",
+      "shell_exec",
+      "network_request",
+      "browser_form_fill",
+      "send_message"
+    ],
+    "mdns_discovery": "minimal_no_paths"
+  },
+  "gateway": {
+    "host": "127.0.0.1",
+    "port": 18789,
+    "max_request_size_bytes": 1048576,
+    "rate_limit_per_minute": 60,
+    "rate_limit_per_session_per_minute": 30,
+    "websocket_ping_interval_ms": 30000,
+    "allowed_origins": ["http://127.0.0.1:3000"],
+    "token_expiry_ms": 300000
+  },
+  "llm": {
+    "provider": "anthropic",
+    "model": "claude-3-5-sonnet-20241022",
+    "credential_ref": "",
+    "max_tokens": 4096
+  },
+  "grpc": {
+    "cert_dir": "/etc/secureclaw/certs",
+    "agent_runtime_addr": "127.0.0.1:19001",
+    "vault_addr": "127.0.0.1:19002",
+    "audit_addr": "127.0.0.1:19003",
+    "sandbox_addr": "127.0.0.1:19004"
+  },
+  "tool_allowlist": [],
+  "workspace_dir": "~/.secureclaw/workspace",
+  "data_dir": "~/.secureclaw/data"
+}

@@ -1,0 +1,88 @@
+syntax = "proto3";
+package secureclaw.vault.v1;
+
+// VaultService: secure credential management.
+// CRITICAL INVARIANT: Raw secret values are NEVER transmitted over gRPC.
+// The only methods that touch raw values are SetSecret (write-only)
+// and InjectCredential (injects into tool input within the vault process).
+service VaultService {
+  // Store a secret in the OS keychain
+  rpc SetSecret(SetSecretRequest) returns (SetSecretResponse);
+  // Get an opaque reference ID for a secret (never the raw value)
+  rpc GetSecretRef(GetSecretRefRequest) returns (GetSecretRefResponse);
+  // Delete a secret
+  rpc DeleteSecret(DeleteSecretRequest) returns (DeleteSecretResponse);
+  // List all stored credential references (no values)
+  rpc ListSecretRefs(ListSecretRefsRequest) returns (ListSecretRefsResponse);
+  // Inject a credential into a tool input JSON at a specific key.
+  // Returns the mutated input with the real value substituted.
+  // The mutated value is passed directly to the sandbox — NEVER back to the LLM.
+  rpc InjectCredential(InjectCredentialRequest) returns (InjectCredentialResponse);
+  // Scan a directory for plaintext secrets (.env files, raw keys)
+  rpc ScanForPlaintextSecrets(ScanRequest) returns (ScanResponse);
+}
+
+message SetSecretRequest {
+  string service = 1;   // e.g., "anthropic"
+  string account = 2;   // e.g., "api_key"
+  string value = 3;     // The actual secret — only used here, then discarded
+}
+
+message SetSecretResponse {
+  string ref_id = 1;    // UUID that identifies this credential in future calls
+  bool success = 2;
+  string error_message = 3;
+}
+
+message GetSecretRefRequest {
+  string service = 1;
+  string account = 2;
+}
+
+message GetSecretRefResponse {
+  string ref_id = 1;    // Opaque reference, no value
+  bool exists = 2;
+}
+
+message DeleteSecretRequest {
+  string service = 1;
+  string account = 2;
+}
+
+message DeleteSecretResponse {
+  bool success = 1;
+}
+
+message ListSecretRefsRequest {}
+
+message ListSecretRefsResponse {
+  repeated SecretRef refs = 1;
+}
+
+message SecretRef {
+  string ref_id = 1;
+  string service = 2;
+  string account = 3;
+  string created_at = 4;
+}
+
+message InjectCredentialRequest {
+  string ref_id = 1;
+  string tool_input_json = 2;   // JSON with __VAULT_REF:ref_id__ placeholder
+  string placeholder_key = 3;   // The JSON key to replace
+}
+
+message InjectCredentialResponse {
+  string mutated_input_json = 1;  // Credential injected — pass to sandbox only
+  bool success = 2;
+  string error_message = 3;
+}
+
+message ScanRequest {
+  string path = 1;  // Directory path to scan
+}
+
+message ScanResponse {
+  repeated string warnings = 1;  // Potential issues
+  repeated string errors = 2;    // Definite secrets found in plaintext
+}

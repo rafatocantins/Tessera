@@ -1,0 +1,117 @@
+/**
+ * server.ts — Fastify server factory for the SecureClaw gateway.
+ *
+ * SECURITY:
+ * - Binds to 127.0.0.1 by default (loopback only)
+ * - CORS restricted — no wildcard origins
+ * - Rate limiting enabled globally
+ * - Token-in-URL detection on every request
+ * - All sensitive headers redacted from logs
+ */
+import Fastify, { type FastifyInstance } from "fastify";
+import fastifyCors from "@fastify/cors";
+import fastifyRateLimit from "@fastify/rate-limit";
+import fastifyWebsocket from "@fastify/websocket";
+import type { GatewayConfig } from "@secureclaw/shared";
+import { blockTokenInQueryParams } from "./plugins/auth.plugin.js";
+import { healthRoute } from "./routes/health.route.js";
+import { sessionsRoute } from "./routes/sessions.route.js";
+import { chatRoute } from "./routes/chat.route.js";
+import type { AgentGrpcClient } from "./grpc/agent.client.js";
+import { AuditGrpcClient } from "./grpc/audit.client.js";
+
+export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcClient): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: {
+      level: process.env["SECURECLAW_LOG_LEVEL"] ?? "info",
+      // Redact sensitive fields from logs
+      redact: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        "req.body.password",
+        "req.body.api_key",
+        "req.body.secret",
+      ],
+    },
+    trustProxy: false,
+    bodyLimit: config.max_request_size_bytes,
+  });
+
+  // CORS — strict, no wildcard
+  await app.register(fastifyCors, {
+    origin: config.allowed_origins,
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type"],
+    credentials: true,
+    maxAge: 300,
+  });
+
+  // Rate limiting — global default; individual routes override via config.rateLimit
+  await app.register(fastifyRateLimit, {
+    max: config.rate_limit_per_minute,
+    timeWindow: "1 minute",
+    // Extract userId from the Bearer token BEFORE auth runs (onRequest lifecycle).
+    // Token format: {userId}.{timestamp}.{hmac} — userId is everything before the first dot.
+    // We don't verify the signature here; rate-limiting an invalid token under any userId is fine.
+    keyGenerator: (req) => {
+      const auth = req.headers["authorization"];
+      if (auth?.startsWith("Bearer ")) {
+        const token = auth.slice(7).trim();
+        const dot = token.indexOf(".");
+        if (dot > 0) return token.slice(0, dot); // userId segment
+      }
+      return req.ip;
+    },
+    errorResponseBuilder: (_req, context) => ({
+      error: "rate_limited",
+      message: `Too many requests. Limit: ${context.max} per ${context.after}`,
+      retry_after_seconds: Math.ceil(context.ttl / 1000),
+    }),
+  });
+
+  // WebSocket support
+  await app.register(fastifyWebsocket);
+
+  // Global security hook: block tokens in query params on ALL routes
+  app.addHook("onRequest", blockTokenInQueryParams);
+
+  // Decorate Fastify instance with the gRPC client so routes can access it
+  app.decorate("agentClient", agentClient);
+
+  // Register routes
+  await app.register(healthRoute, { prefix: "/health" });
+  await app.register(sessionsRoute, { prefix: "/api/v1/sessions" });
+  const auditClient = new AuditGrpcClient();
+  await app.register(chatRoute, {
+    prefix: "/api/v1/chat",
+    maxMsgsPerMinute: config.rate_limit_per_session_per_minute,
+    auditClient,
+  });
+
+  return app;
+}
+
+export async function startServer(config: GatewayConfig, agentClient: AgentGrpcClient): Promise<FastifyInstance> {
+  const app = await buildServer(config, agentClient);
+
+  // CRITICAL: Bind to loopback only by default
+  // External access requires explicit configuration + reverse proxy with TLS
+  await app.listen({
+    port: config.port,
+    host: config.host, // Default: "127.0.0.1" — never "0.0.0.0" by default
+  });
+
+  app.log.info(
+    { host: config.host, port: config.port },
+    "SecureClaw Gateway started"
+  );
+
+  if (config.host !== "127.0.0.1") {
+    app.log.warn(
+      { host: config.host },
+      "SECURITY WARNING: Gateway is not bound to loopback. Ensure a reverse proxy with TLS and authentication is in place."
+    );
+  }
+
+  return app;
+}

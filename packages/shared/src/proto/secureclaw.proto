@@ -1,0 +1,17 @@
+syntax = "proto3";
+package secureclaw.v1;
+
+// Common status codes used across all services
+enum StatusCode {
+  OK = 0;
+  DENIED_BY_POLICY = 1;
+  INJECTION_DETECTED = 2;
+  SANDBOX_ERROR = 3;
+  AUTH_FAILED = 4;
+  COST_CAP_EXCEEDED = 5;
+  APPROVAL_PENDING = 6;
+  TIMEOUT = 7;
+  NOT_FOUND = 8;
+  INTERNAL_ERROR = 9;
+  INVALID_INPUT = 10;
+}

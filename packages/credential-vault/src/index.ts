@@ -1,0 +1,20 @@
+export { VaultService } from "./vault.service.js";
+export { createKeychainAdapter, KEYCHAIN_SERVICE_PREFIX } from "./keychain.adapter.js";
+export { RefStore } from "./ref-store.js";
+export { injectCredential, injectAllCredentials } from "./injector.js";
+export { scanDirectory } from "./scanner.js";
+export { startVaultGrpcServer } from "./grpc/server.js";
+export type { KeychainAdapter } from "./keychain.adapter.js";
+export type { SecretRef } from "./ref-store.js";
+
+// ── Standalone server entry point ─────────────────────────────────────────
+const isMain = process.argv[1]?.endsWith("index.js");
+if (isMain) {
+  const { VaultService: Svc } = await import("./vault.service.js");
+  const { startVaultGrpcServer: start } = await import("./grpc/server.js");
+
+  const dataDir = process.env["VAULT_DATA_DIR"] ?? "/tmp/secureclaw-vault";
+  const svc = new Svc(dataDir);
+  await start(svc);
+  process.stdout.write("[vault] Service ready\n");
+}

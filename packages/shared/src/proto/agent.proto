@@ -1,0 +1,117 @@
+syntax = "proto3";
+package secureclaw.agent.v1;
+
+// AgentService: called by the Gateway to interact with the Agent Runtime.
+// All responses are streamed to support real-time token streaming,
+// tool call notifications, and human-in-the-loop approval gates.
+service AgentService {
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc SendMessage(SendMessageRequest) returns (stream AgentChunk);
+  rpc ApproveToolCall(ApproveToolCallRequest) returns (ApproveToolCallResponse);
+  rpc TerminateSession(TerminateSessionRequest) returns (TerminateSessionResponse);
+  rpc GetSessionStatus(GetSessionStatusRequest) returns (GetSessionStatusResponse);
+}
+
+// Session management
+message CreateSessionRequest {
+  string user_id = 1;
+  string provider = 2;  // "anthropic" | "openai" | "gemini" | "ollama"
+  map<string, string> metadata = 3;
+}
+
+message CreateSessionResponse {
+  string session_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+// Main agent interaction — streams back chunks as they arrive
+message SendMessageRequest {
+  string session_id = 1;
+  string content = 2;
+  string content_type = 3;  // "user_instruction" | "external_data"
+}
+
+message AgentChunk {
+  oneof payload {
+    TextChunk text = 1;
+    ToolCallPendingChunk tool_pending = 2;
+    ToolCallResultChunk tool_result = 3;
+    InjectionWarningChunk injection_warning = 4;
+    SessionCompleteChunk complete = 5;
+    ErrorChunk error = 6;
+  }
+}
+
+message TextChunk {
+  string delta = 1;
+  bool is_final = 2;
+}
+
+message ToolCallPendingChunk {
+  string call_id = 1;
+  string tool_id = 2;
+  string input_preview = 3;     // Human-readable — no raw credentials
+  bool requires_approval = 4;
+  int32 approval_timeout_seconds = 5;
+}
+
+message ToolCallResultChunk {
+  string call_id = 1;
+  string tool_id = 2;
+  bool success = 3;
+  int32 duration_ms = 4;
+  string error_message = 5;
+}
+
+message InjectionWarningChunk {
+  string excerpt = 1;           // First 200 chars of suspicious content
+  string pattern_matched = 2;
+}
+
+message SessionCompleteChunk {
+  int32 input_tokens = 1;
+  int32 output_tokens = 2;
+  double cost_usd = 3;
+  int32 tool_calls_executed = 4;
+}
+
+message ErrorChunk {
+  string code = 1;
+  string message = 2;
+}
+
+// Human-in-the-loop approval
+message ApproveToolCallRequest {
+  string session_id = 1;
+  string call_id = 2;
+  bool approved = 3;
+}
+
+message ApproveToolCallResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// Session control
+message TerminateSessionRequest {
+  string session_id = 1;
+}
+
+message TerminateSessionResponse {
+  bool success = 1;
+  double total_cost_usd = 2;
+}
+
+message GetSessionStatusRequest {
+  string session_id = 1;
+}
+
+message GetSessionStatusResponse {
+  string session_id = 1;
+  string status = 2;   // "active" | "idle" | "awaiting_approval" | "terminated" | "error"
+  int32 total_input_tokens = 3;
+  int32 total_output_tokens = 4;
+  double total_cost_usd = 5;
+  int32 tool_call_count = 6;
+}
