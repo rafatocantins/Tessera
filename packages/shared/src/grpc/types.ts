@@ -465,3 +465,40 @@ export interface GrpcDeleteUserDataResponse {
   deleted_count: number;
   success: boolean;
 }
+
+// ── Control UI — agent runtime extensions ──────────────────────────────────
+
+export interface GrpcListSessionsRequest {}
+
+export interface GrpcSessionSummary {
+  session_id: string;
+  user_id: string;
+  provider: string;
+  status: string;
+  created_at: number;
+  last_activity_at: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cost_usd: number;
+  tool_call_count: number;
+}
+
+export interface GrpcListSessionsResponse {
+  sessions: GrpcSessionSummary[];
+}
+
+export interface GrpcListPendingApprovalsRequest {}
+
+export interface GrpcPendingApprovalSummary {
+  call_id: string;
+  session_id: string;
+  user_id: string;
+  tool_id: string;
+  input_preview: string;
+  requested_at: number;
+  expires_at: number;
+}
+
+export interface GrpcListPendingApprovalsResponse {
+  approvals: GrpcPendingApprovalSummary[];
+}

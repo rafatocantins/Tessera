@@ -10,6 +10,9 @@ service AgentService {
   rpc ApproveToolCall(ApproveToolCallRequest) returns (ApproveToolCallResponse);
   rpc TerminateSession(TerminateSessionRequest) returns (TerminateSessionResponse);
   rpc GetSessionStatus(GetSessionStatusRequest) returns (GetSessionStatusResponse);
+  // Control UI
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  rpc ListPendingApprovals(ListPendingApprovalsRequest) returns (ListPendingApprovalsResponse);
 }
 
 // Session management
@@ -105,6 +108,43 @@ message TerminateSessionResponse {
 
 message GetSessionStatusRequest {
   string session_id = 1;
+}
+
+// ── Control UI ──────────────────────────────────────────────────────────────
+
+message ListSessionsRequest {}
+
+message SessionSummary {
+  string session_id = 1;
+  string user_id = 2;
+  string provider = 3;
+  string status = 4;
+  int64 created_at = 5;
+  int64 last_activity_at = 6;
+  int64 total_input_tokens = 7;
+  int64 total_output_tokens = 8;
+  double total_cost_usd = 9;
+  int32 tool_call_count = 10;
+}
+
+message ListSessionsResponse {
+  repeated SessionSummary sessions = 1;
+}
+
+message ListPendingApprovalsRequest {}
+
+message PendingApprovalSummary {
+  string call_id = 1;
+  string session_id = 2;
+  string user_id = 3;
+  string tool_id = 4;
+  string input_preview = 5;
+  int64 requested_at = 6;
+  int64 expires_at = 7;
+}
+
+message ListPendingApprovalsResponse {
+  repeated PendingApprovalSummary approvals = 1;
 }
 
 message GetSessionStatusResponse {

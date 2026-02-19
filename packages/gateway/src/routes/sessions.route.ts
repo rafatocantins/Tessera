@@ -22,6 +22,19 @@ export async function sessionsRoute(fastify: FastifyInstance): Promise<void> {
   fastify.addHook("onRequest", blockTokenInQueryParams);
   fastify.addHook("preHandler", verifyToken);
 
+  // GET /sessions — List all active sessions (Control UI dashboard)
+  fastify.get("/", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async (_req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const sessions = await fastify.agentClient.listSessions();
+        await reply.send({ sessions });
+      } catch (err) {
+        fastify.log.error({ err }, "Failed to list sessions");
+        await reply.code(502).send({ error: "agent_unavailable" });
+      }
+    }
+  );
+
   // POST /sessions — Create new session
   // Strict limit: session creation is expensive; 10/min prevents flooding.
   fastify.post("/", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req: FastifyRequest, reply: FastifyReply) => {

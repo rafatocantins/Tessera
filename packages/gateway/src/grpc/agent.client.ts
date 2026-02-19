@@ -15,6 +15,12 @@ import type {
   GrpcTerminateSessionResponse,
   GrpcGetSessionStatusRequest,
   GrpcGetSessionStatusResponse,
+  GrpcListSessionsRequest,
+  GrpcListSessionsResponse,
+  GrpcSessionSummary,
+  GrpcListPendingApprovalsRequest,
+  GrpcListPendingApprovalsResponse,
+  GrpcPendingApprovalSummary,
 } from "@secureclaw/shared";
 
 export interface SessionStatus {
@@ -111,6 +117,32 @@ export class AgentGrpcClient {
         (err: grpc.ServiceError | null, res: GrpcGetSessionStatusResponse) => {
           if (err) { reject(err); return; }
           resolve(res);
+        }
+      );
+    });
+  }
+
+  listSessions(): Promise<GrpcSessionSummary[]> {
+    return new Promise((resolve, reject) => {
+      const req: GrpcListSessionsRequest = {};
+      this.client.ListSessions(
+        req,
+        (err: grpc.ServiceError | null, res: GrpcListSessionsResponse) => {
+          if (err) { reject(err); return; }
+          resolve(res.sessions ?? []);
+        }
+      );
+    });
+  }
+
+  listPendingApprovals(): Promise<GrpcPendingApprovalSummary[]> {
+    return new Promise((resolve, reject) => {
+      const req: GrpcListPendingApprovalsRequest = {};
+      this.client.ListPendingApprovals(
+        req,
+        (err: grpc.ServiceError | null, res: GrpcListPendingApprovalsResponse) => {
+          if (err) { reject(err); return; }
+          resolve(res.approvals ?? []);
         }
       );
     });

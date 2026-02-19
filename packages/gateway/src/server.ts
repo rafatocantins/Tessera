@@ -17,8 +17,12 @@ import { blockTokenInQueryParams } from "./plugins/auth.plugin.js";
 import { healthRoute } from "./routes/health.route.js";
 import { sessionsRoute } from "./routes/sessions.route.js";
 import { chatRoute } from "./routes/chat.route.js";
+import { approvalsRoute } from "./routes/approvals.route.js";
+import { auditRoute } from "./routes/audit.route.js";
+import { credentialsRoute } from "./routes/credentials.route.js";
 import type { AgentGrpcClient } from "./grpc/agent.client.js";
 import { AuditGrpcClient } from "./grpc/audit.client.js";
+import { VaultGrpcClient } from "./grpc/vault.client.js";
 
 export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcClient): Promise<FastifyInstance> {
   const app = Fastify({
@@ -31,6 +35,7 @@ export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcC
         "req.body.password",
         "req.body.api_key",
         "req.body.secret",
+        "req.body.value",
       ],
     },
     trustProxy: false,
@@ -87,6 +92,12 @@ export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcC
     maxMsgsPerMinute: config.rate_limit_per_session_per_minute,
     auditClient,
   });
+  await app.register(approvalsRoute, { prefix: "/api/v1/approvals" });
+  await app.register(auditRoute, { prefix: "/api/v1/audit", auditClient });
+
+  const vaultClient = new VaultGrpcClient();
+  app.decorate("vaultClient", vaultClient);
+  await app.register(credentialsRoute, { prefix: "/api/v1/credentials" });
 
   return app;
 }

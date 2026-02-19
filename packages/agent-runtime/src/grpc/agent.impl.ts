@@ -19,6 +19,10 @@ import type {
   GrpcTerminateSessionResponse,
   GrpcGetSessionStatusRequest,
   GrpcGetSessionStatusResponse,
+  GrpcListSessionsRequest,
+  GrpcListSessionsResponse,
+  GrpcListPendingApprovalsRequest,
+  GrpcListPendingApprovalsResponse,
 } from "@secureclaw/shared";
 
 type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
@@ -157,6 +161,57 @@ export function makeAgentImpl(sessionManager: SessionManager, agentLoop: AgentLo
         total_cost_usd: ctx.total_cost_usd,
         tool_call_count: ctx.tool_call_count,
       });
+    },
+
+    ListSessions(
+      _call: UnaryCall<GrpcListSessionsRequest, GrpcListSessionsResponse>,
+      callback: Callback<GrpcListSessionsResponse>
+    ): void {
+      try {
+        const sessions = sessionManager.getActiveSessions().map((ctx) => ({
+          session_id: ctx.session_id,
+          user_id: ctx.user_id,
+          // LLMProvider is an object; try to read a name property if present
+          provider: (ctx.provider as { name?: string }).name ?? "",
+          status: ctx.status,
+          created_at: ctx.created_at,
+          last_activity_at: ctx.last_activity_at,
+          total_input_tokens: ctx.total_input_tokens,
+          total_output_tokens: ctx.total_output_tokens,
+          total_cost_usd: ctx.total_cost_usd,
+          tool_call_count: ctx.tool_call_count,
+        }));
+        callback(null, { sessions });
+      } catch (err) {
+        process.stderr.write(
+          `[agent.impl] ListSessions error: ${err instanceof Error ? err.message : String(err)}\n`
+        );
+        callback(null, { sessions: [] });
+      }
+    },
+
+    ListPendingApprovals(
+      _call: UnaryCall<GrpcListPendingApprovalsRequest, GrpcListPendingApprovalsResponse>,
+      callback: Callback<GrpcListPendingApprovalsResponse>
+    ): void {
+      const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
+      try {
+        const approvals = sessionManager.approvalGate.getAllPending().map((p) => ({
+          call_id: p.call_id,
+          session_id: p.session_id,
+          user_id: sessionManager.getSession(p.session_id)?.user_id ?? "",
+          tool_id: p.tool_id,
+          input_preview: p.input_preview,
+          requested_at: p.requested_at,
+          expires_at: p.requested_at + APPROVAL_TIMEOUT_MS,
+        }));
+        callback(null, { approvals });
+      } catch (err) {
+        process.stderr.write(
+          `[agent.impl] ListPendingApprovals error: ${err instanceof Error ? err.message : String(err)}\n`
+        );
+        callback(null, { approvals: [] });
+      }
     },
   };
 }

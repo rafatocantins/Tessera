@@ -5,7 +5,12 @@
  * forwarding messages. Full audit logging is handled by agent-runtime.
  */
 import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
-import type { GrpcGetCostSummaryRequest, GrpcGetCostSummaryResponse } from "@secureclaw/shared";
+import type {
+  GrpcGetCostSummaryRequest,
+  GrpcGetCostSummaryResponse,
+  GrpcQueryEventsRequest,
+  GrpcAuditEvent,
+} from "@secureclaw/shared";
 
 export interface CostSummary {
   total_cost_usd: number;
@@ -47,6 +52,18 @@ export class AuditGrpcClient {
           });
         }
       );
+    });
+  }
+
+  queryEvents(req: GrpcQueryEventsRequest): Promise<GrpcAuditEvent[]> {
+    return new Promise((resolve, reject) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const call = this.client.QueryEvents(req) as any;
+      const events: GrpcAuditEvent[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      call.on("data", (event: any) => events.push(event as GrpcAuditEvent));
+      call.on("end", () => resolve(events));
+      call.on("error", (err: Error) => reject(err));
     });
   }
 

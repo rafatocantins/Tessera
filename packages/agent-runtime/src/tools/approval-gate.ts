@@ -88,6 +88,13 @@ export class ApprovalGate {
   }
 
   /**
+   * Get all pending approvals across all sessions (for Control UI dashboard).
+   */
+  getAllPending(): PendingApproval[] {
+    return Array.from(this.pending.values());
+  }
+
+  /**
    * Cancel all pending approvals for a session (called on session termination).
    */
   cancelSession(sessionId: string): void {

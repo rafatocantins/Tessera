@@ -1,132 +1,155 @@
 /**
- * SecureClaw Control UI — Phase 2 scaffold.
+ * App.tsx — SecureClaw Control UI root.
  *
- * This is a minimal placeholder. Phase 2 will add:
- * - Session management dashboard
- * - Real-time cost tracking
- * - Audit log viewer (streaming)
- * - Tool approval queue
- * - Agent status monitoring
- * - Credential management (read-only: create/revoke, never display)
+ * State machine:
+ *  - secret === null → <Login> screen
+ *  - secret !== null → three-tab dashboard (Approvals, Sessions, Audit Log)
+ *
+ * The HMAC secret lives only in React state; never localStorage/sessionStorage.
  */
+import { useState } from "react";
+import { Login } from "./components/Login.js";
+import { ApprovalQueue } from "./components/ApprovalQueue.js";
+import { SessionList } from "./components/SessionList.js";
+import { AuditLog } from "./components/AuditLog.js";
+import { CredentialVault } from "./components/CredentialVault.js";
 
-const GATEWAY_URL = "http://127.0.0.1:18789";
+type Tab = "approvals" | "sessions" | "audit" | "credentials";
 
 export function App() {
+  const [secret, setSecret] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("approvals");
+  const [pendingCount, setPendingCount] = useState(0);
+
+  if (!secret) {
+    return <Login onLogin={(s) => setSecret(s)} />;
+  }
+
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>SecureClaw</h1>
-        <span style={styles.badge}>Control UI · Phase 2</span>
+    <div style={s.root}>
+      {/* Top bar */}
+      <header style={s.header}>
+        <div style={s.headerLeft}>
+          <span style={s.brand}>SecureClaw</span>
+          <span style={s.brandSub}>Control UI</span>
+        </div>
+
+        <nav style={s.nav}>
+          <TabBtn
+            active={tab === "approvals"}
+            onClick={() => setTab("approvals")}
+            badge={pendingCount > 0 ? pendingCount : undefined}
+          >
+            Approvals
+          </TabBtn>
+          <TabBtn active={tab === "sessions"} onClick={() => setTab("sessions")}>
+            Sessions
+          </TabBtn>
+          <TabBtn active={tab === "audit"} onClick={() => setTab("audit")}>
+            Audit Log
+          </TabBtn>
+          <TabBtn active={tab === "credentials"} onClick={() => setTab("credentials")}>
+            Credentials
+          </TabBtn>
+        </nav>
+
+        <div style={s.headerRight}>
+          <span style={s.userLabel}>control-ui</span>
+          <button
+            style={s.logoutBtn}
+            onClick={() => {
+              setSecret(null);
+              setPendingCount(0);
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
-      <main style={styles.main}>
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>Status</h2>
-          <p style={styles.cardBody}>
-            Phase 2 Control UI scaffold. The gateway is expected at{" "}
-            <code style={styles.code}>{GATEWAY_URL}</code>.
-          </p>
-        </div>
-
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>Quick Links</h2>
-          <ul style={styles.list}>
-            <li>
-              <a style={styles.link} href={`${GATEWAY_URL}/health`} target="_blank" rel="noreferrer">
-                Gateway health check
-              </a>
-            </li>
-            <li>
-              <a style={styles.link} href="/api/v1/sessions" target="_blank" rel="noreferrer">
-                Sessions API
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>Browser WebChat (Phase 1)</h2>
-          <p style={styles.cardBody}>
-            For Phase 1 testing, use the static WebChat client served by the gateway.
-          </p>
-        </div>
+      {/* Content */}
+      <main style={s.main}>
+        {tab === "approvals" && (
+          <ApprovalQueue
+            secret={secret}
+            onCountChange={setPendingCount}
+          />
+        )}
+        {tab === "sessions" && <SessionList secret={secret} />}
+        {tab === "audit" && <AuditLog secret={secret} />}
+        {tab === "credentials" && <CredentialVault secret={secret} />}
       </main>
     </div>
   );
 }
 
-const styles = {
-  container: {
+interface TabBtnProps {
+  active: boolean;
+  onClick: () => void;
+  badge?: number;
+  children: React.ReactNode;
+}
+
+function TabBtn({ active, onClick, badge, children }: TabBtnProps) {
+  return (
+    <button
+      style={{ ...s.tabBtn, ...(active ? s.tabBtnActive : {}) }}
+      onClick={onClick}
+    >
+      {children}
+      {badge !== undefined && (
+        <span style={s.badge}>{badge > 99 ? "99+" : badge}</span>
+      )}
+    </button>
+  );
+}
+
+const s = {
+  root: {
     fontFamily: "system-ui, -apple-system, sans-serif",
     background: "#0f0f0f",
     color: "#e0e0e0",
     minHeight: "100vh",
-  },
-  header: {
-    padding: "12px 24px",
-    background: "#1a1a1a",
-    borderBottom: "1px solid #333",
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-  },
-  title: {
-    fontSize: "18px",
-    fontWeight: 700,
-    color: "#fff",
-    margin: 0,
-  },
-  badge: {
-    fontSize: "11px",
-    padding: "2px 8px",
-    borderRadius: "12px",
-    background: "#1a3a1a",
-    color: "#4caf50",
-  },
-  main: {
-    padding: "24px",
     display: "flex",
     flexDirection: "column" as const,
-    gap: "16px",
-    maxWidth: "640px",
   },
-  card: {
-    background: "#1a1a1a",
-    border: "1px solid #333",
-    borderRadius: "8px",
-    padding: "16px 20px",
+  header: {
+    padding: "0 20px",
+    background: "#141414",
+    borderBottom: "1px solid #2a2a2a",
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+    height: "48px",
+    flexShrink: 0,
   },
-  cardTitle: {
-    fontSize: "14px",
-    fontWeight: 600,
+  headerLeft: { display: "flex", alignItems: "baseline", gap: "8px" },
+  brand: { fontSize: "16px", fontWeight: 700, color: "#fff" },
+  brandSub: { fontSize: "11px", color: "#666" },
+  nav: { display: "flex", gap: "2px", flex: 1 },
+  headerRight: { display: "flex", alignItems: "center", gap: "12px" },
+  userLabel: { fontSize: "12px", color: "#555", fontFamily: "monospace" },
+  logoutBtn: {
+    fontSize: "11px", padding: "4px 10px", cursor: "pointer",
+    background: "transparent", border: "1px solid #333", borderRadius: "4px",
+    color: "#888",
+  },
+  tabBtn: {
+    background: "transparent", border: "none", cursor: "pointer",
+    color: "#888", fontSize: "13px", padding: "0 14px",
+    height: "48px", borderBottom: "2px solid transparent",
+    display: "flex", alignItems: "center", gap: "6px",
+    transition: "color 0.1s",
+  },
+  tabBtnActive: {
     color: "#fff",
-    margin: "0 0 8px",
+    borderBottom: "2px solid #4caf50",
   },
-  cardBody: {
-    fontSize: "13px",
-    color: "#aaa",
-    margin: 0,
-    lineHeight: 1.6,
+  badge: {
+    fontSize: "10px", fontWeight: 700,
+    background: "#c0392b", color: "#fff",
+    borderRadius: "10px", padding: "1px 5px",
+    lineHeight: "1.4",
   },
-  code: {
-    background: "#111",
-    border: "1px solid #333",
-    borderRadius: "4px",
-    padding: "1px 6px",
-    fontFamily: "monospace",
-    fontSize: "12px",
-    color: "#89d",
-  },
-  list: {
-    fontSize: "13px",
-    color: "#aaa",
-    margin: 0,
-    paddingLeft: "20px",
-    lineHeight: 2,
-  },
-  link: {
-    color: "#89d",
-    textDecoration: "none",
-  },
+  main: { flex: 1, overflowY: "auto" as const },
 } as const;
