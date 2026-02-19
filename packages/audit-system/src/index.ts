@@ -18,7 +18,8 @@ if (isMain) {
   const dataDir = process.env["AUDIT_DATA_DIR"] ?? "/tmp/secureclaw-audit";
   const db = createDb(dataDir);
   init(db);
-  const svc = new Svc(db);
+  const costCapUsd = parseFloat(process.env["AUDIT_COST_CAP_USD"] ?? "5.0");
+  const svc = new Svc(db, costCapUsd);
   await start(svc);
   process.stdout.write("[audit] Service ready\n");
 }

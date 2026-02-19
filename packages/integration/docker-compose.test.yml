@@ -1,0 +1,19 @@
+# Integration test overrides — merged on top of docker-compose.dev.yml.
+#
+# Usage (handled automatically by global-setup.ts):
+#   docker compose -f docker-compose.dev.yml -f packages/integration/docker-compose.test.yml up -d
+#
+# host.docker.internal resolves to the host machine so agent-runtime can reach
+# the mock LLM server that runs in the test process.  On macOS this name works
+# out of the box; the extra_hosts entry makes it work on Linux as well.
+services:
+  agent-runtime:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      ANTHROPIC_BASE_URL: "http://host.docker.internal:${MOCK_LLM_PORT:-11435}"
+      ANTHROPIC_API_KEY: "integration-test-key"
+
+  audit-system:
+    environment:
+      AUDIT_COST_CAP_USD: "${TEST_COST_CAP_USD:-0.001}"

@@ -246,6 +246,45 @@ jobs:
           "
         continue-on-error: true  # ESM dynamic import in CI may need adjustment
 
+  # ── Integration tests (Docker Compose + mock LLM) ─────────────────────────
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build-all]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Run integration tests
+        run: pnpm --filter @secureclaw/integration test
+        env:
+          GATEWAY_HMAC_SECRET: integration-test-secret
+          VAULT_MASTER_KEY: integration-test-vault-key
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.dev.yml \
+            -f packages/integration/docker-compose.test.yml \
+            logs --no-color --tail=200
+        env:
+          GATEWAY_HMAC_SECRET: integration-test-secret
+          VAULT_MASTER_KEY: integration-test-vault-key
+
   # ── docker-compose validate ────────────────────────────────────────────────
   compose-validate:
     name: Compose Validate

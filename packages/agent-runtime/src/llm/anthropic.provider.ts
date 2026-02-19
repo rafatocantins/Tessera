@@ -20,7 +20,13 @@ export class AnthropicProvider implements LLMProvider {
     apiKey: string
   ) {
     // apiKey is injected at construction time — never stored in session context
-    this.client = new Anthropic({ apiKey });
+    // ANTHROPIC_BASE_URL may be set to point at a local mock server (e.g. integration tests)
+    this.client = new Anthropic({
+      apiKey,
+      ...(process.env["ANTHROPIC_BASE_URL"]
+        ? { baseURL: process.env["ANTHROPIC_BASE_URL"] }
+        : {}),
+    });
   }
 
   async *streamCompletion(

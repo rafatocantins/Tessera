@@ -1,0 +1,14 @@
+{
+  "name": "@secureclaw/integration",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run --reporter=verbose"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.13",
+    "vitest": "^3.0.0",
+    "ws": "^8.18.0"
+  }
+}
