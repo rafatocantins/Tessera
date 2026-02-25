@@ -20,6 +20,7 @@ export interface RunToolParams {
   env_vars: string[];
   network_mode: "none" | "restricted" | "host_dev_only";
   allowed_domains?: string[] | undefined;
+  workspace_volume?: string | undefined;
 }
 
 export class SandboxService {
@@ -57,6 +58,7 @@ export class SandboxService {
       networkMode: params.network_mode,
       allowedDomains: params.allowed_domains,
       useGvisor: this.runtimeInfo?.gvisor_available ?? false,
+      workspaceVolume: params.workspace_volume,
     };
 
     return this.manager.runTool(cfg);

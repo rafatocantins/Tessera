@@ -289,6 +289,8 @@ export interface GrpcRunToolRequest {
   env_vars: string[];
   network_mode: string;
   allowed_domains: string[];
+  /** Named Docker volume mounted at /workspace in the container (persists per session). */
+  workspace_volume?: string;
 }
 
 export interface GrpcRunToolResponse {

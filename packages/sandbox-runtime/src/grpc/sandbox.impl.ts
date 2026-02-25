@@ -63,6 +63,7 @@ export function makeSandboxImpl(sandboxSvc: SandboxService) {
           env_vars: req.env_vars ?? [],
           network_mode: (req.network_mode as "none" | "restricted" | "host_dev_only") || "none",
           allowed_domains: req.allowed_domains?.length ? req.allowed_domains : undefined,
+          workspace_volume: req.workspace_volume || undefined,
         })
         .then((result) => {
           callback(null, {

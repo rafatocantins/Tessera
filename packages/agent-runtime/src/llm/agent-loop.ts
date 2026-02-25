@@ -469,7 +469,9 @@ export class AgentLoop {
               memory_bytes: decision.resource_limits.memory_bytes,
               cpu_shares: decision.resource_limits.cpu_shares,
               pids_limit: decision.resource_limits.pids_limit,
-              network_mode: "none",
+              network_mode: tool_id === "http_request" ? "restricted" : "none",
+              // Named Docker volume: persists file_read/file_write data across tool calls
+              workspace_volume: `secureclaw-workspace-${ctx.session_id}`,
             });
 
             const durationMs = Date.now() - startMs;

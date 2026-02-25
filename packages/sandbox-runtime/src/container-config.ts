@@ -26,6 +26,8 @@ export interface ContainerBuildConfig {
   networkMode: "none" | "restricted" | "host_dev_only";
   allowedDomains?: string[] | undefined;
   useGvisor: boolean;
+  /** Named Docker volume to mount at /workspace (read-write, persists per session). */
+  workspaceVolume?: string | undefined;
 }
 
 const TOOL_RUNNER_CMD = ["node", "/tool/run.js"];
@@ -112,6 +114,12 @@ export function buildHardenedContainerOptions(
 
       // Logging: none (we capture via dockerode Attach, not log driver)
       LogConfig: { Type: "none", Config: {} },
+
+      // Workspace volume: shared named volume per session, mounted rw at /workspace
+      // Volume is created by Docker on first use and persists until session cleanup.
+      ...(cfg.workspaceVolume
+        ? { Binds: [`${cfg.workspaceVolume}:/workspace:rw`] }
+        : {}),
 
       // Auto-remove after exit (cleanup)
       AutoRemove: false, // We remove manually after capturing output

@@ -22,6 +22,7 @@ export interface RunToolParams {
   env_vars?: string[] | undefined;
   network_mode?: string | undefined;
   allowed_domains?: string[] | undefined;
+  workspace_volume?: string | undefined;
 }
 
 export interface RunToolResult {
@@ -65,6 +66,7 @@ export class SandboxGrpcClient {
         env_vars: params.env_vars ?? [],
         network_mode: params.network_mode ?? "none",
         allowed_domains: params.allowed_domains ?? [],
+        ...(params.workspace_volume ? { workspace_volume: params.workspace_volume } : {}),
       };
       this.client.RunTool(req, (err: grpc.ServiceError | null, res: GrpcRunToolResponse) => {
         if (err) {
