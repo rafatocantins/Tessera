@@ -13,8 +13,11 @@ import { ApprovalQueue } from "./components/ApprovalQueue.js";
 import { SessionList } from "./components/SessionList.js";
 import { AuditLog } from "./components/AuditLog.js";
 import { CredentialVault } from "./components/CredentialVault.js";
+import { ComplianceDashboard } from "./components/ComplianceDashboard.js";
+import { CostDashboard } from "./components/CostDashboard.js";
+import { Marketplace } from "./components/Marketplace.js";
 
-type Tab = "approvals" | "sessions" | "audit" | "credentials";
+type Tab = "approvals" | "sessions" | "audit" | "credentials" | "compliance" | "costs" | "marketplace";
 
 export function App() {
   const [secret, setSecret] = useState<string | null>(null);
@@ -51,6 +54,15 @@ export function App() {
           <TabBtn active={tab === "credentials"} onClick={() => setTab("credentials")}>
             Credentials
           </TabBtn>
+          <TabBtn active={tab === "compliance"} onClick={() => setTab("compliance")}>
+            Compliance
+          </TabBtn>
+          <TabBtn active={tab === "costs"} onClick={() => setTab("costs")}>
+            Costs
+          </TabBtn>
+          <TabBtn active={tab === "marketplace"} onClick={() => setTab("marketplace")}>
+            Marketplace
+          </TabBtn>
         </nav>
 
         <div style={s.headerRight}>
@@ -78,6 +90,9 @@ export function App() {
         {tab === "sessions" && <SessionList secret={secret} />}
         {tab === "audit" && <AuditLog secret={secret} />}
         {tab === "credentials" && <CredentialVault secret={secret} />}
+        {tab === "compliance" && <ComplianceDashboard secret={secret} />}
+        {tab === "costs" && <CostDashboard secret={secret} />}
+        {tab === "marketplace" && <Marketplace secret={secret} />}
       </main>
     </div>
   );
@@ -126,7 +141,7 @@ const s = {
   headerLeft: { display: "flex", alignItems: "baseline", gap: "8px" },
   brand: { fontSize: "16px", fontWeight: 700, color: "#fff" },
   brandSub: { fontSize: "11px", color: "#666" },
-  nav: { display: "flex", gap: "2px", flex: 1 },
+  nav: { display: "flex", gap: "2px", flex: 1, flexWrap: "nowrap" as const, overflowX: "auto" as const },
   headerRight: { display: "flex", alignItems: "center", gap: "12px" },
   userLabel: { fontSize: "12px", color: "#555", fontFamily: "monospace" },
   logoutBtn: {
@@ -136,10 +151,10 @@ const s = {
   },
   tabBtn: {
     background: "transparent", border: "none", cursor: "pointer",
-    color: "#888", fontSize: "13px", padding: "0 14px",
+    color: "#888", fontSize: "12px", padding: "0 9px",
     height: "48px", borderBottom: "2px solid transparent",
     display: "flex", alignItems: "center", gap: "6px",
-    transition: "color 0.1s",
+    transition: "color 0.1s", whiteSpace: "nowrap" as const,
   },
   tabBtnActive: {
     color: "#fff",

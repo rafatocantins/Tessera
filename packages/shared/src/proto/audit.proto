@@ -18,6 +18,10 @@ service AuditService {
   rpc GetCostSummary(GetCostSummaryRequest) returns (GetCostSummaryResponse);
   // Record per-turn token usage to the cost ledger
   rpc RecordCost(RecordCostRequest) returns (RecordCostResponse);
+  // EU AI Act compliance report for a time window
+  rpc GetComplianceReport(GetComplianceReportRequest) returns (ComplianceReportResponse);
+  // Team-based cost aggregation
+  rpc GetTeamCostSummary(GetTeamCostSummaryRequest) returns (GetTeamCostSummaryResponse);
 }
 
 enum EventType {
@@ -133,4 +137,48 @@ message RecordCostRequest {
 
 message RecordCostResponse {
   bool success = 1;
+}
+
+// ── EU AI Act Compliance Report ───────────────────────────────────────────
+
+message GetComplianceReportRequest {
+  int64 from_unix_ms = 1;
+  int64 to_unix_ms   = 2;
+}
+
+message ArticleStatus {
+  string article_id    = 1;   // e.g. "article_14_human_oversight"
+  string status        = 2;   // "COMPLIANT" | "WARNING" | "UNKNOWN"
+  string summary       = 3;
+  string evidence_json = 4;   // JSON blob with counts/flags
+}
+
+message ComplianceReportResponse {
+  string generated_at_iso  = 1;
+  string framework_version = 2;   // "EU AI Act 2024/1689"
+  string overall_status    = 3;   // "COMPLIANT" | "WARNING"
+  repeated ArticleStatus articles = 4;
+  repeated string issues   = 5;
+}
+
+// ── Team Cost Summary ─────────────────────────────────────────────────────
+
+message GetTeamCostSummaryRequest {
+  string team_id     = 1;  // empty = all teams
+  int64 from_unix_ms = 2;
+  int64 to_unix_ms   = 3;
+}
+
+message TeamCostEntry {
+  string team_id        = 1;
+  double total_cost_usd = 2;
+  int64  input_tokens   = 3;
+  int64  output_tokens  = 4;
+  int64  session_count  = 5;
+  map<string, double> cost_by_model = 6;
+}
+
+message GetTeamCostSummaryResponse {
+  repeated TeamCostEntry teams = 1;
+  double grand_total_usd       = 2;
 }

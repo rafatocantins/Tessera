@@ -7,6 +7,8 @@
 import type * as grpc from "@grpc/grpc-js";
 import type { SkillRegistry } from "../registry.js";
 import type { SandboxGrpcClient } from "../sandbox.client.js";
+import type { MarketplaceRegistry } from "../marketplace.js";
+import { verifySkillManifest } from "../verifier.js";
 import type {
   GrpcInstallSkillRequest,
   GrpcInstallSkillResponse,
@@ -19,12 +21,20 @@ import type {
   GrpcRemoveSkillResponse,
   GrpcExecuteSkillToolRequest,
   GrpcExecuteSkillToolResponse,
+  GrpcPublishSkillRequest,
+  GrpcPublishSkillResponse,
+  GrpcListMarketplaceSkillsRequest,
+  GrpcListMarketplaceSkillsResponse,
+  GrpcMarketplaceSkillSummary,
+  GrpcGetMarketplaceSkillRequest,
+  GrpcGetMarketplaceSkillResponse,
+  GrpcInstallFromMarketplaceRequest,
 } from "@secureclaw/shared";
 
 type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
 type Callback<Res> = grpc.sendUnaryData<Res>;
 
-export function makeSkillsImpl(registry: SkillRegistry, sandbox: SandboxGrpcClient) {
+export function makeSkillsImpl(registry: SkillRegistry, sandbox: SandboxGrpcClient, marketplace?: MarketplaceRegistry) {
   return {
     InstallSkill(
       call: UnaryCall<GrpcInstallSkillRequest, GrpcInstallSkillResponse>,
@@ -185,6 +195,141 @@ export function makeSkillsImpl(registry: SkillRegistry, sandbox: SandboxGrpcClie
             oom_killed: false,
           });
         });
+    },
+
+    // ── Marketplace handlers ───────────────────────────────────────────────
+
+    PublishSkill(
+      call: UnaryCall<GrpcPublishSkillRequest, GrpcPublishSkillResponse>,
+      callback: Callback<GrpcPublishSkillResponse>
+    ): void {
+      if (!marketplace) {
+        callback(null, { success: false, skill_id: "", version: "", message: "Marketplace not enabled" });
+        return;
+      }
+      try {
+        const req = call.request;
+        // Verify signature first
+        const verifyResult = verifySkillManifest(req.manifest_json);
+        if (!verifyResult.valid) {
+          callback(null, { success: false, skill_id: "", version: "", message: `Invalid signature: ${verifyResult.error}` });
+          return;
+        }
+        const result = marketplace.publish(req.manifest_json, req.trivy_scan_passed ?? false);
+        callback(null, {
+          success: result.success,
+          skill_id: result.skill_id,
+          version: result.version,
+          message: result.message,
+        });
+      } catch (err) {
+        process.stderr.write(`[skills-grpc] PublishSkill error: ${String(err)}\n`);
+        callback(null, { success: false, skill_id: "", version: "", message: String(err) });
+      }
+    },
+
+    ListMarketplaceSkills(
+      call: UnaryCall<GrpcListMarketplaceSkillsRequest, GrpcListMarketplaceSkillsResponse>,
+      callback: Callback<GrpcListMarketplaceSkillsResponse>
+    ): void {
+      if (!marketplace) {
+        callback(null, { skills: [] });
+        return;
+      }
+      try {
+        const req = call.request;
+        const entries = marketplace.list(
+          req.namespace || undefined,
+          req.tag || undefined,
+          req.search || undefined
+        );
+        const skills: GrpcMarketplaceSkillSummary[] = entries.map((e) => {
+          let name = e.skill_id;
+          let description = "";
+          let author_name = "";
+          let tags: string[] = [];
+          try {
+            const m = JSON.parse(e.manifest_json) as { name?: string; description?: string; author?: { name?: string }; tags?: string[] };
+            name = m.name ?? e.skill_id;
+            description = m.description ?? "";
+            author_name = m.author?.name ?? "";
+            tags = m.tags ?? [];
+          } catch { /* use defaults */ }
+          return {
+            skill_id: e.skill_id,
+            version: e.skill_version,
+            name,
+            description,
+            author_name,
+            download_count: e.download_count,
+            trivy_scan_passed: e.trivy_scan_passed,
+            tags,
+          };
+        });
+        callback(null, { skills });
+      } catch (err) {
+        process.stderr.write(`[skills-grpc] ListMarketplaceSkills error: ${String(err)}\n`);
+        callback(null, { skills: [] });
+      }
+    },
+
+    GetMarketplaceSkill(
+      call: UnaryCall<GrpcGetMarketplaceSkillRequest, GrpcGetMarketplaceSkillResponse>,
+      callback: Callback<GrpcGetMarketplaceSkillResponse>
+    ): void {
+      if (!marketplace) {
+        callback(null, { found: false, manifest_json: "", download_count: 0 });
+        return;
+      }
+      try {
+        const req = call.request;
+        const entry = marketplace.get(req.skill_id, req.version || undefined);
+        if (!entry) {
+          callback(null, { found: false, manifest_json: "", download_count: 0 });
+          return;
+        }
+        callback(null, {
+          found: true,
+          manifest_json: entry.manifest_json,
+          download_count: entry.download_count,
+        });
+      } catch (err) {
+        process.stderr.write(`[skills-grpc] GetMarketplaceSkill error: ${String(err)}\n`);
+        callback(null, { found: false, manifest_json: "", download_count: 0 });
+      }
+    },
+
+    InstallFromMarketplace(
+      call: UnaryCall<GrpcInstallFromMarketplaceRequest, GrpcInstallSkillResponse>,
+      callback: Callback<GrpcInstallSkillResponse>
+    ): void {
+      if (!marketplace) {
+        callback(null, { success: false, message: "Marketplace not enabled", skill_id: "", skill_version: "", tools_registered: 0 });
+        return;
+      }
+      try {
+        const req = call.request;
+        const entry = marketplace.get(req.skill_id, req.version || undefined);
+        if (!entry) {
+          callback(null, { success: false, message: `Skill ${req.skill_id}@${req.version} not found in marketplace`, skill_id: req.skill_id, skill_version: req.version, tools_registered: 0 });
+          return;
+        }
+        // Install into local registry
+        const installResult = registry.install(entry.manifest_json, false);
+        if (installResult.success) {
+          marketplace.recordInstall(entry.skill_id, entry.skill_version);
+        }
+        callback(null, {
+          success: installResult.success,
+          message: installResult.message,
+          skill_id: installResult.skill_id ?? "",
+          skill_version: installResult.skill_version ?? "",
+          tools_registered: installResult.tools_registered ?? 0,
+        });
+      } catch (err) {
+        process.stderr.write(`[skills-grpc] InstallFromMarketplace error: ${String(err)}\n`);
+        callback(null, { success: false, message: String(err), skill_id: "", skill_version: "", tools_registered: 0 });
+      }
     },
   };
 }

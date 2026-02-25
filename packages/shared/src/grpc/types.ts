@@ -261,6 +261,48 @@ export interface GrpcRecordCostResponse {
   success: boolean;
 }
 
+// EU AI Act compliance report
+export interface GrpcGetComplianceReportRequest {
+  from_unix_ms: number;
+  to_unix_ms: number;
+}
+
+export interface GrpcArticleStatus {
+  article_id: string;
+  status: string;
+  summary: string;
+  evidence_json: string;
+}
+
+export interface GrpcComplianceReportResponse {
+  generated_at_iso: string;
+  framework_version: string;
+  overall_status: string;
+  articles: GrpcArticleStatus[];
+  issues: string[];
+}
+
+// Team cost summary
+export interface GrpcGetTeamCostSummaryRequest {
+  team_id: string;
+  from_unix_ms: number;
+  to_unix_ms: number;
+}
+
+export interface GrpcTeamCostEntry {
+  team_id: string;
+  total_cost_usd: number;
+  input_tokens: number;
+  output_tokens: number;
+  session_count: number;
+  cost_by_model: Record<string, number>;
+}
+
+export interface GrpcGetTeamCostSummaryResponse {
+  teams: GrpcTeamCostEntry[];
+  grand_total_usd: number;
+}
+
 // ── Sandbox Service ───────────────────────────────────────────────────────
 
 export interface GrpcCheckRuntimeRequest {}
@@ -388,6 +430,56 @@ export interface GrpcExecuteSkillToolResponse {
   duration_ms: number;
   timed_out: boolean;
   oom_killed: boolean;
+}
+
+// Marketplace types
+export interface GrpcPublishSkillRequest {
+  manifest_json: string;
+  trivy_scan_passed: boolean;
+}
+
+export interface GrpcPublishSkillResponse {
+  success: boolean;
+  skill_id: string;
+  version: string;
+  message: string;
+}
+
+export interface GrpcListMarketplaceSkillsRequest {
+  namespace: string;
+  tag: string;
+  search: string;
+}
+
+export interface GrpcMarketplaceSkillSummary {
+  skill_id: string;
+  version: string;
+  name: string;
+  description: string;
+  author_name: string;
+  download_count: number;
+  trivy_scan_passed: boolean;
+  tags: string[];
+}
+
+export interface GrpcListMarketplaceSkillsResponse {
+  skills: GrpcMarketplaceSkillSummary[];
+}
+
+export interface GrpcGetMarketplaceSkillRequest {
+  skill_id: string;
+  version: string;
+}
+
+export interface GrpcGetMarketplaceSkillResponse {
+  found: boolean;
+  manifest_json: string;
+  download_count: number;
+}
+
+export interface GrpcInstallFromMarketplaceRequest {
+  skill_id: string;
+  version: string;
 }
 
 // ── Memory Service ────────────────────────────────────────────────────────

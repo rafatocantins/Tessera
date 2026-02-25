@@ -10,6 +10,10 @@ import type {
   GrpcGetCostSummaryResponse,
   GrpcQueryEventsRequest,
   GrpcAuditEvent,
+  GrpcGetComplianceReportRequest,
+  GrpcComplianceReportResponse,
+  GrpcGetTeamCostSummaryRequest,
+  GrpcGetTeamCostSummaryResponse,
 } from "@secureclaw/shared";
 
 export interface CostSummary {
@@ -64,6 +68,32 @@ export class AuditGrpcClient {
       call.on("data", (event: any) => events.push(event as GrpcAuditEvent));
       call.on("end", () => resolve(events));
       call.on("error", (err: Error) => reject(err));
+    });
+  }
+
+  getComplianceReport(fromMs: number, toMs: number): Promise<GrpcComplianceReportResponse> {
+    return new Promise((resolve, reject) => {
+      const req: GrpcGetComplianceReportRequest = { from_unix_ms: fromMs, to_unix_ms: toMs };
+      this.client.GetComplianceReport(
+        req,
+        (err: grpc.ServiceError | null, res: GrpcComplianceReportResponse) => {
+          if (err) { reject(err); return; }
+          resolve(res);
+        }
+      );
+    });
+  }
+
+  getTeamCostSummary(teamId: string, fromMs: number, toMs: number): Promise<GrpcGetTeamCostSummaryResponse> {
+    return new Promise((resolve, reject) => {
+      const req: GrpcGetTeamCostSummaryRequest = { team_id: teamId, from_unix_ms: fromMs, to_unix_ms: toMs };
+      this.client.GetTeamCostSummary(
+        req,
+        (err: grpc.ServiceError | null, res: GrpcGetTeamCostSummaryResponse) => {
+          if (err) { reject(err); return; }
+          resolve(res);
+        }
+      );
     });
   }
 

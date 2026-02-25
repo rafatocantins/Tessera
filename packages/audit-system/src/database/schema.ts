@@ -120,4 +120,12 @@ export function initSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_alerts_session   ON alerts(session_id);
     CREATE INDEX IF NOT EXISTS idx_alerts_ack       ON alerts(acknowledged);
   `);
+
+  // Migration: add team_id column (idempotent — SQLite ALTER ADD COLUMN is safe to retry)
+  try {
+    db.exec("ALTER TABLE cost_ledger ADD COLUMN team_id TEXT NOT NULL DEFAULT ''");
+  } catch { /* column already exists — safe to ignore */ }
+  try {
+    db.exec("CREATE INDEX IF NOT EXISTS idx_cost_team_day ON cost_ledger(team_id, recorded_at)");
+  } catch { /* index already exists */ }
 }

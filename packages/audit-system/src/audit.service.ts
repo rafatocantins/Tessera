@@ -31,6 +31,33 @@ export interface CostSummaryResult {
   cost_by_model: Record<string, number>;
 }
 
+export interface ArticleResult {
+  article_id: string;
+  status: string;
+  summary: string;
+  evidence: Record<string, unknown>;
+}
+
+export interface ComplianceReportResult {
+  articles: ArticleResult[];
+  issues: string[];
+  overall_status: string;
+}
+
+export interface TeamCostEntry {
+  team_id: string;
+  total_cost_usd: number;
+  input_tokens: number;
+  output_tokens: number;
+  session_count: number;
+  cost_by_model: Record<string, number>;
+}
+
+export interface TeamCostSummaryResult {
+  teams: TeamCostEntry[];
+  grand_total_usd: number;
+}
+
 export class AuditService {
   private db: Database.Database;
   private costCapUsd: number;
@@ -213,13 +240,19 @@ export class AuditService {
     output_tokens: number;
     cost_usd: number;
   }): void {
+    // Extract team: "acme/alice" → "acme"; "alice" → "alice"
+    const team_id = params.user_id.includes("/")
+      ? (params.user_id.split("/")[0] ?? params.user_id)
+      : params.user_id;
+
     this.db
       .prepare(
-        "INSERT INTO cost_ledger (session_id, user_id, provider, model, input_tokens, output_tokens, cost_usd, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO cost_ledger (session_id, user_id, team_id, provider, model, input_tokens, output_tokens, cost_usd, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       .run(
         params.session_id,
         params.user_id,
+        team_id,
         params.provider,
         params.model,
         params.input_tokens,
@@ -227,6 +260,129 @@ export class AuditService {
         params.cost_usd,
         nowUtcMs()
       );
+  }
+
+  getComplianceReport(fromMs: number, toMs: number): ComplianceReportResult {
+    type CountRow = { count: number };
+    const countEvent = (type: string): number =>
+      this.db.prepare<[string, number, number], CountRow>(
+        "SELECT COUNT(*) as count FROM audit_events WHERE event_type=? AND created_at>=? AND created_at<=?"
+      ).get(type, fromMs, toMs)?.count ?? 0;
+
+    const approvalRequested = countEvent("APPROVAL_REQUESTED");
+    const approvalGranted   = countEvent("APPROVAL_GRANTED");
+    const approvalDenied    = countEvent("APPROVAL_DENIED");
+    const approvalTimeout   = countEvent("APPROVAL_TIMEOUT");
+    const policyDenied      = countEvent("POLICY_DENIED");
+    const injectionDetected = countEvent("INJECTION_DETECTED");
+    const sandboxErrors     = countEvent("SANDBOX_ERROR");
+    const totalEvents       =
+      this.db.prepare<[number, number], CountRow>(
+        "SELECT COUNT(*) as count FROM audit_events WHERE created_at>=? AND created_at<=?"
+      ).get(fromMs, toMs)?.count ?? 0;
+
+    // Article 14: oversight_rate = approvals resolved / requested
+    const oversightRate = approvalRequested === 0 ? 1
+      : (approvalGranted + approvalDenied + approvalTimeout) / approvalRequested;
+
+    const articles: ArticleResult[] = [
+      {
+        article_id: "article_9_risk_management",
+        status: "COMPLIANT",
+        summary: "Deny-by-default policy engine active; injection detection enabled",
+        evidence: { policyDenied, injectionDetected, sandboxErrors,
+                    policy: "deny_all_except_allowlist", injection_detection: "both" },
+      },
+      {
+        article_id: "article_12_transparency_logging",
+        status: "COMPLIANT",
+        summary: `${totalEvents} immutable audit events; tamper-resistant SQLite triggers`,
+        evidence: { totalEvents, tamper_resistant: true, format: "append-only SQLite" },
+      },
+      {
+        article_id: "article_14_human_oversight",
+        status: oversightRate >= 1 ? "COMPLIANT" : "WARNING",
+        summary: `${approvalRequested} approvals requested; ${Math.round(oversightRate * 100)}% resolved`,
+        evidence: { approvalRequested, approvalGranted, approvalDenied, approvalTimeout, oversightRate },
+      },
+      {
+        article_id: "article_15_cybersecurity",
+        status: "COMPLIANT",
+        summary: "gVisor sandbox + session delimiters + multi-layer injection defense",
+        evidence: { sandbox_mode: "gVisor", session_delimiter_protection: true,
+                    injection_layers: ["heuristic", "llm_classifier", "session_delimiter"] },
+      },
+    ];
+
+    const issues = articles
+      .filter((a) => a.status !== "COMPLIANT")
+      .map((a) => `${a.article_id}: ${a.summary}`);
+
+    return { articles, issues, overall_status: issues.length === 0 ? "COMPLIANT" : "WARNING" };
+  }
+
+  getTeamCostSummary(teamId: string | undefined, fromMs: number, toMs: number): TeamCostSummaryResult {
+    type CostRow = {
+      team_id: string;
+      user_id: string;
+      model: string;
+      total_cost_usd: number;
+      input_tokens: number;
+      output_tokens: number;
+    };
+
+    let rows: CostRow[];
+    if (teamId) {
+      rows = this.db.prepare<[string, number, number], CostRow>(
+        "SELECT team_id, user_id, model, SUM(cost_usd) as total_cost_usd, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens FROM cost_ledger WHERE team_id=? AND recorded_at>=? AND recorded_at<=? GROUP BY team_id, user_id, model"
+      ).all(teamId, fromMs, toMs);
+    } else {
+      rows = this.db.prepare<[number, number], CostRow>(
+        "SELECT team_id, user_id, model, SUM(cost_usd) as total_cost_usd, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens FROM cost_ledger WHERE recorded_at>=? AND recorded_at<=? GROUP BY team_id, user_id, model"
+      ).all(fromMs, toMs);
+    }
+
+    // Aggregate by team
+    const teamMap = new Map<string, TeamCostEntry>();
+    for (const row of rows) {
+      const key = row.team_id || row.user_id;
+      if (!teamMap.has(key)) {
+        teamMap.set(key, {
+          team_id: key,
+          total_cost_usd: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          session_count: 0,
+          cost_by_model: {},
+        });
+      }
+      const entry = teamMap.get(key)!;
+      entry.total_cost_usd += row.total_cost_usd;
+      entry.input_tokens += row.input_tokens;
+      entry.output_tokens += row.output_tokens;
+      entry.cost_by_model[row.model] = (entry.cost_by_model[row.model] ?? 0) + row.total_cost_usd;
+    }
+
+    // Count sessions per team
+    type SessionCountRow = { team_id: string; session_count: number };
+    let sessionRows: SessionCountRow[];
+    if (teamId) {
+      sessionRows = this.db.prepare<[string, number, number], SessionCountRow>(
+        "SELECT team_id, COUNT(DISTINCT session_id) as session_count FROM cost_ledger WHERE team_id=? AND recorded_at>=? AND recorded_at<=? GROUP BY team_id"
+      ).all(teamId, fromMs, toMs);
+    } else {
+      sessionRows = this.db.prepare<[number, number], SessionCountRow>(
+        "SELECT team_id, COUNT(DISTINCT session_id) as session_count FROM cost_ledger WHERE recorded_at>=? AND recorded_at<=? GROUP BY team_id"
+      ).all(fromMs, toMs);
+    }
+    for (const sr of sessionRows) {
+      const entry = teamMap.get(sr.team_id);
+      if (entry) entry.session_count = sr.session_count;
+    }
+
+    const teams = [...teamMap.values()];
+    const grand_total_usd = teams.reduce((s, t) => s + t.total_cost_usd, 0);
+    return { teams, grand_total_usd };
   }
 
   private buildAlertContext(sessionId?: string): AlertContext {

@@ -10,11 +10,13 @@
 import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
 import type { SkillRegistry } from "../registry.js";
 import type { SandboxGrpcClient } from "../sandbox.client.js";
+import type { MarketplaceRegistry } from "../marketplace.js";
 import { makeSkillsImpl } from "./skills.impl.js";
 
 export function startSkillsGrpcServer(
   registry: SkillRegistry,
-  sandbox: SandboxGrpcClient
+  sandbox: SandboxGrpcClient,
+  marketplace?: MarketplaceRegistry
 ): Promise<grpc.Server> {
   const addr = process.env["SKILLS_ADDR"] ?? "0.0.0.0:19005";
 
@@ -29,7 +31,7 @@ export function startSkillsGrpcServer(
   const server = new grpc.Server();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  server.addService((SkillsService as any).service, makeSkillsImpl(registry, sandbox));
+  server.addService((SkillsService as any).service, makeSkillsImpl(registry, sandbox, marketplace));
 
   const creds = serverCredentials("skills-engine");
 

@@ -19,6 +19,10 @@ import type {
   GrpcGetCostSummaryResponse,
   GrpcRecordCostRequest,
   GrpcRecordCostResponse,
+  GrpcGetComplianceReportRequest,
+  GrpcComplianceReportResponse,
+  GrpcGetTeamCostSummaryRequest,
+  GrpcGetTeamCostSummaryResponse,
 } from "@secureclaw/shared";
 import type { AuditSeverity } from "@secureclaw/shared";
 
@@ -168,6 +172,66 @@ export function makeAuditImpl(auditSvc: AuditService) {
       } catch (err) {
         process.stderr.write(`[audit-grpc] recordCost error: ${String(err)}\n`);
         callback(null, { success: false });
+      }
+    },
+
+    GetComplianceReport(
+      call: UnaryCall<GrpcGetComplianceReportRequest, GrpcComplianceReportResponse>,
+      callback: Callback<GrpcComplianceReportResponse>
+    ): void {
+      try {
+        const req = call.request;
+        const fromMs = req.from_unix_ms || 0;
+        const toMs = req.to_unix_ms || Date.now();
+        const result = auditSvc.getComplianceReport(fromMs, toMs);
+        callback(null, {
+          generated_at_iso: new Date().toISOString(),
+          framework_version: "EU AI Act 2024/1689",
+          overall_status: result.overall_status,
+          articles: result.articles.map((a) => ({
+            article_id: a.article_id,
+            status: a.status,
+            summary: a.summary,
+            evidence_json: JSON.stringify(a.evidence),
+          })),
+          issues: result.issues,
+        });
+      } catch (err) {
+        process.stderr.write(`[audit-grpc] getComplianceReport error: ${String(err)}\n`);
+        callback(null, {
+          generated_at_iso: new Date().toISOString(),
+          framework_version: "EU AI Act 2024/1689",
+          overall_status: "UNKNOWN",
+          articles: [],
+          issues: [`Error generating report: ${String(err)}`],
+        });
+      }
+    },
+
+    GetTeamCostSummary(
+      call: UnaryCall<GrpcGetTeamCostSummaryRequest, GrpcGetTeamCostSummaryResponse>,
+      callback: Callback<GrpcGetTeamCostSummaryResponse>
+    ): void {
+      try {
+        const req = call.request;
+        const teamId = req.team_id || undefined;
+        const fromMs = req.from_unix_ms || 0;
+        const toMs = req.to_unix_ms || Date.now();
+        const result = auditSvc.getTeamCostSummary(teamId, fromMs, toMs);
+        callback(null, {
+          teams: result.teams.map((t) => ({
+            team_id: t.team_id,
+            total_cost_usd: t.total_cost_usd,
+            input_tokens: t.input_tokens,
+            output_tokens: t.output_tokens,
+            session_count: t.session_count,
+            cost_by_model: t.cost_by_model,
+          })),
+          grand_total_usd: result.grand_total_usd,
+        });
+      } catch (err) {
+        process.stderr.write(`[audit-grpc] getTeamCostSummary error: ${String(err)}\n`);
+        callback(null, { teams: [], grand_total_usd: 0 });
       }
     },
   };

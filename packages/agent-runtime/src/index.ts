@@ -18,6 +18,8 @@ export type { SystemPromptParams } from "./prompt/system-prompt-builder.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
+  const { initTelemetry, shutdownTelemetry } = await import("./telemetry.js");
+  initTelemetry();
   const { SanitizerService } = await import("@secureclaw/input-sanitizer");
   const { SessionManager: Mgr } = await import("./session/session-manager.js");
   const { ToolPolicyEngine: Policy } = await import("./tools/policy-engine.js");
@@ -65,4 +67,12 @@ if (isMain) {
 
   await start(sessionManager, agentLoop);
   process.stdout.write("[agent-runtime] Service ready\n");
+
+  // Graceful shutdown: flush OTel spans before exit
+  const shutdown = (signal: string): void => {
+    process.stdout.write(`[agent-runtime] Received ${signal} — shutting down\n`);
+    shutdownTelemetry().then(() => process.exit(0)).catch(() => process.exit(1));
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }

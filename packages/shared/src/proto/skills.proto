@@ -25,6 +25,16 @@ service SkillsService {
   // Execute a specific tool from an installed skill.
   // The skills engine delegates to sandbox-runtime for actual execution.
   rpc ExecuteSkillTool(ExecuteSkillToolRequest) returns (ExecuteSkillToolResponse);
+
+  // ── Marketplace ──────────────────────────────────────────────────────────
+  // Publish a skill to the community marketplace.
+  rpc PublishSkill(PublishSkillRequest) returns (PublishSkillResponse);
+  // List skills available in the marketplace.
+  rpc ListMarketplaceSkills(ListMarketplaceSkillsRequest) returns (ListMarketplaceSkillsResponse);
+  // Get a single marketplace skill (full manifest).
+  rpc GetMarketplaceSkill(GetMarketplaceSkillRequest) returns (GetMarketplaceSkillResponse);
+  // Install a skill from the marketplace into the local registry.
+  rpc InstallFromMarketplace(InstallFromMarketplaceRequest) returns (InstallSkillResponse);
 }
 
 // ── Install ───────────────────────────────────────────────────────────────
@@ -129,4 +139,55 @@ message ExecuteSkillToolResponse {
   int32 duration_ms = 6;
   bool timed_out = 7;
   bool oom_killed = 8;
+}
+
+// ── Marketplace ────────────────────────────────────────────────────────────
+
+message PublishSkillRequest {
+  string manifest_json    = 1;
+  bool trivy_scan_passed  = 2;
+}
+
+message PublishSkillResponse {
+  bool success    = 1;
+  string skill_id = 2;
+  string version  = 3;
+  string message  = 4;
+}
+
+message ListMarketplaceSkillsRequest {
+  string namespace = 1;
+  string tag       = 2;
+  string search    = 3;
+}
+
+message MarketplaceSkillSummary {
+  string skill_id        = 1;
+  string version         = 2;
+  string name            = 3;
+  string description     = 4;
+  string author_name     = 5;
+  int64  download_count  = 6;
+  bool   trivy_scan_passed = 7;
+  repeated string tags   = 8;
+}
+
+message ListMarketplaceSkillsResponse {
+  repeated MarketplaceSkillSummary skills = 1;
+}
+
+message GetMarketplaceSkillRequest {
+  string skill_id = 1;
+  string version  = 2;
+}
+
+message GetMarketplaceSkillResponse {
+  bool   found          = 1;
+  string manifest_json  = 2;
+  int64  download_count = 3;
+}
+
+message InstallFromMarketplaceRequest {
+  string skill_id = 1;
+  string version  = 2;
 }

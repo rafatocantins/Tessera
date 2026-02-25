@@ -18,6 +18,7 @@ import { Command } from "commander";
 import { tokenCommand } from "./commands/token.js";
 import { sessionCommand } from "./commands/session.js";
 import { healthCommand } from "./commands/health.js";
+import { skillCommand } from "./commands/skill.js";
 
 const program = new Command();
 
@@ -29,5 +30,6 @@ program
 program.addCommand(tokenCommand());
 program.addCommand(sessionCommand());
 program.addCommand(healthCommand());
+program.addCommand(skillCommand());
 
 program.parse();

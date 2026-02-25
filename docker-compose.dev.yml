@@ -79,3 +79,20 @@ services:
       SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
       SLACK_APP_TOKEN: "${SLACK_APP_TOKEN:-}"
       SECURECLAW_LOG_LEVEL: debug
+
+# ── Distributed Tracing (OpenTelemetry) ─────────────────────────────────────
+# Uncomment to enable distributed tracing with Jaeger:
+#
+#   jaeger:
+#     image: jaegertracing/all-in-one:1.60
+#     ports:
+#       - "127.0.0.1:16686:16686"   # Jaeger UI
+#       - "127.0.0.1:4318:4318"     # OTLP HTTP
+#     networks:
+#       - secureclaw-net
+#
+# Then add to agent-runtime environment:
+#     OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+#
+# Open http://127.0.0.1:16686 to explore traces.
+# Traces will appear for: LLM calls, tool executions, approval waits.

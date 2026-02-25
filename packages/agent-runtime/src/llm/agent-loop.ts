@@ -8,6 +8,7 @@
  * - All tool executions sandboxed in gVisor containers
  * - Every tool call and result logged to the audit system
  */
+import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { PolicyDeniedError, CostCapError } from "@secureclaw/shared";
 import type { SanitizerService } from "@secureclaw/input-sanitizer";
 import type { GrpcAgentChunk } from "@secureclaw/shared";
@@ -214,6 +215,7 @@ export class AgentLoop {
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let toolCallsExecuted = 0;
+    const tracer = trace.getTracer("secureclaw-agent-runtime", "0.1.0");
 
     while (continueLoop) {
       // Load skill tools once per turn (skills can be installed between turns)
@@ -283,6 +285,14 @@ export class AgentLoop {
       const toolCallsThisTurn: Array<{ call_id: string; tool_id: string; input: Record<string, unknown> }> = [];
       const toolResultsBuffer: Array<{ call_id: string; tool_id: string; result: string }> = [];
 
+      const genAiSpan = tracer.startSpan("gen_ai.chat", { kind: SpanKind.INTERNAL });
+      genAiSpan.setAttributes({
+        "gen_ai.system": ctx.provider.provider_name,
+        "gen_ai.request.model": ctx.provider.model_name,
+      });
+
+      let streamError: unknown = undefined;
+      try {
       for await (const chunk of ctx.provider.streamCompletion(
         ctx.messages,
         allowedTools,
@@ -346,12 +356,19 @@ export class AgentLoop {
               severity: "INFO",
             });
 
-            const approved = await this.approvalGate.waitForApproval({
-              call_id,
-              tool_id,
-              session_id: ctx.session_id,
-              input_preview: inputPreview,
-            });
+            const approvalSpan = tracer.startSpan("secureclaw.approval.wait", { kind: SpanKind.INTERNAL });
+            approvalSpan.setAttributes({ "secureclaw.tool.id": tool_id, "secureclaw.call.id": call_id });
+            let approved: boolean;
+            try {
+              approved = await this.approvalGate.waitForApproval({
+                call_id,
+                tool_id,
+                session_id: ctx.session_id,
+                input_preview: inputPreview,
+              });
+            } finally {
+              approvalSpan.end();
+            }
 
             ctx.status = "active";
 
@@ -414,6 +431,13 @@ export class AgentLoop {
           const startMs = Date.now();
           let toolResult: string;
           let toolSuccess = false;
+          const toolSpan = tracer.startSpan("secureclaw.tool.run", { kind: SpanKind.INTERNAL });
+          toolSpan.setAttributes({
+            "secureclaw.tool.id": tool_id,
+            "secureclaw.tool.image": skillRoute
+              ? `skill:${skillRoute.skill_id}@${skillRoute.skill_version}`
+              : (TOOL_IMAGES[tool_id] ?? `secureclaw/${tool_id}:latest`),
+          });
 
           try {
             // Skill tool: delegate to skills-engine gRPC
@@ -428,6 +452,11 @@ export class AgentLoop {
               });
               const durationMs = Date.now() - startMs;
               toolSuccess = result.success;
+              toolSpan.setAttributes({
+                "secureclaw.tool.exit_code": result.exit_code,
+                "secureclaw.tool.duration_ms": durationMs,
+                "secureclaw.tool.timed_out": result.timed_out,
+              });
               toolResult = result.timed_out
                 ? `[TIMEOUT after ${durationMs}ms]`
                 : result.stdout || result.stderr || `[Exit code: ${result.exit_code}]`;
@@ -476,6 +505,11 @@ export class AgentLoop {
 
             const durationMs = Date.now() - startMs;
             toolSuccess = result.exit_code === 0 && !result.timed_out;
+            toolSpan.setAttributes({
+              "secureclaw.tool.exit_code": result.exit_code,
+              "secureclaw.tool.duration_ms": durationMs,
+              "secureclaw.tool.timed_out": result.timed_out,
+            });
             toolResult = result.timed_out
               ? `[TIMEOUT after ${durationMs}ms]`
               : result.stdout || result.stderr || `[Exit code: ${result.exit_code}]`;
@@ -509,6 +543,8 @@ export class AgentLoop {
           } catch (err) {
             const durationMs = Date.now() - startMs;
             toolResult = `[SANDBOX ERROR: ${err instanceof Error ? err.message : String(err)}]`;
+            toolSpan.recordException(err instanceof Error ? err : new Error(String(err)));
+            toolSpan.setStatus({ code: SpanStatusCode.ERROR });
 
             this.auditClient.logEvent({
               event_type: "TOOL_RESULT",
@@ -527,6 +563,8 @@ export class AgentLoop {
                 error_message: toolResult,
               },
             };
+          } finally {
+            toolSpan.end();
           }
 
           toolResultsBuffer.push({ call_id, tool_id, result: toolResult });
@@ -534,14 +572,28 @@ export class AgentLoop {
         } else if (chunk.type === "finish") {
           totalInputTokens += chunk.usage.input_tokens;
           totalOutputTokens += chunk.usage.output_tokens;
+          genAiSpan.setAttributes({
+            "gen_ai.usage.input_tokens": chunk.usage.input_tokens,
+            "gen_ai.usage.output_tokens": chunk.usage.output_tokens,
+          });
 
           if (chunk.finish_reason !== "tool_use") {
             continueLoop = false;
           }
         } else if (chunk.type === "error") {
+          genAiSpan.setStatus({ code: SpanStatusCode.ERROR, message: chunk.error });
           yield { error: { code: "LLM_ERROR", message: chunk.error } };
           continueLoop = false;
         }
+      }
+      } catch (err) {
+        streamError = err;
+        genAiSpan.recordException(err instanceof Error ? err : new Error(String(err)));
+        genAiSpan.setStatus({ code: SpanStatusCode.ERROR });
+        throw err;
+      } finally {
+        genAiSpan.end();
+        void streamError; // suppress unused warning
       }
 
       // Write to conversation history in the correct order:

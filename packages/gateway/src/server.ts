@@ -20,9 +20,13 @@ import { chatRoute } from "./routes/chat.route.js";
 import { approvalsRoute } from "./routes/approvals.route.js";
 import { auditRoute } from "./routes/audit.route.js";
 import { credentialsRoute } from "./routes/credentials.route.js";
+import { complianceRoute } from "./routes/compliance.route.js";
+import { costsRoute } from "./routes/costs.route.js";
+import { marketplaceRoute } from "./routes/marketplace.route.js";
 import type { AgentGrpcClient } from "./grpc/agent.client.js";
 import { AuditGrpcClient } from "./grpc/audit.client.js";
 import { VaultGrpcClient } from "./grpc/vault.client.js";
+import { SkillsGrpcClient } from "./grpc/skills.client.js";
 
 export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcClient): Promise<FastifyInstance> {
   const app = Fastify({
@@ -98,6 +102,13 @@ export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcC
   const vaultClient = new VaultGrpcClient();
   app.decorate("vaultClient", vaultClient);
   await app.register(credentialsRoute, { prefix: "/api/v1/credentials" });
+
+  await app.register(complianceRoute, { prefix: "/api/v1/compliance", auditClient });
+  await app.register(costsRoute, { prefix: "/api/v1/costs", auditClient });
+
+  const skillsClient = new SkillsGrpcClient();
+  app.decorate("skillsClient", skillsClient);
+  await app.register(marketplaceRoute, { prefix: "/api/v1/marketplace", skillsClient });
 
   return app;
 }
