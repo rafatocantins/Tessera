@@ -21,6 +21,9 @@ const isMain =
   process.argv[1].endsWith("index.js");
 
 if (isMain) {
+  const { loadDotenv } = await import("@secureclaw/shared");
+  loadDotenv();
+
   const { createMemoryDatabase: createDb } = await import("./db/connection.js");
   const { MemoryService: Svc } = await import("./memory.service.js");
   const { startMemoryGrpcServer: startServer } = await import("./grpc/server.js");

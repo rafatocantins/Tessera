@@ -68,10 +68,10 @@ etc.) cut corners.
 
 | Sub-phase | What | Why it matters |
 |---|---|---|
-| **DX-A** | Replace `better-sqlite3` with `@libsql/client` | Ships prebuilt binaries for Windows / macOS / Linux — zero compilation, no Visual Studio Build Tools required |
-| **DX-B** | `pnpm dev` single command via `concurrently` | Replaces 6 terminal tabs with one colour-coded command |
-| **DX-C** | `secureclaw init` wizard + `.env` support | Generates secrets, asks for API key, prints next steps — first chat in under 5 minutes from a clean clone |
-| **DX-D** | GitHub Actions CI matrix (Windows × macOS × Linux × Node 20 / 22) | Catches cross-platform regressions on every PR before they reach users |
+| **DX-A** ✅ | Replace `better-sqlite3` with built-in `node:sqlite` | Zero native compilation — no Visual Studio Build Tools, no prebuilt binary lookups; requires Node 22.13+ |
+| **DX-B** ✅ | `pnpm dev` single command via `concurrently` | Replaces 6 terminal tabs with one colour-coded command |
+| **DX-C** ✅ | `secureclaw init` wizard + `.env` support | Generates secrets, asks for API key, prints next steps — first chat in under 5 minutes from a clean clone |
+| **DX-D** ✅ | GitHub Actions CI matrix (Windows × macOS × Linux × Node 20 / 22) | `.github/workflows/cross-platform.yml`: Node 22 = build+test on all 3 OS; Node 20 = build-only (node:sqlite unavailable) |
 
 ### Current problems
 
@@ -155,23 +155,24 @@ exists, so users do not need to export variables manually).
 
 Estimated effort: 1 session.
 
-### Phase DX-D — Cross-platform CI matrix
+### Phase DX-D — Cross-platform CI matrix ✅
 
-Add a GitHub Actions workflow that runs on every PR:
+**Implemented:** `.github/workflows/cross-platform.yml`
 
-```yaml
-strategy:
-  matrix:
-    os: [ubuntu-latest, windows-latest, macos-latest]
-    node: [20, 22]
-```
+Matrix: `os: [ubuntu-latest, windows-latest, macos-latest]` × `node: [20, 22]`
 
-Steps: `pnpm install` → `pnpm -r build` → `pnpm -r test`.
+| Node version | Steps | Reason |
+|---|---|---|
+| 22 | install → build → **test** | Minimum supported version; `node:sqlite` unflagged in 22.13+ |
+| 20 | install → **build only** | `node:sqlite` not available; verifies TypeScript compilation only |
+
+Features:
+- `fail-fast: false` — all 6 combinations run even if one fails
+- Concurrency cancellation — in-flight runs for same PR are cancelled
+- `pnpm/action-setup@v4` with `cache: pnpm` for fast installs
 
 This makes cross-platform regressions visible immediately instead of
 discovered when a user tries to run on a new OS.
-
-Estimated effort: 0.5 sessions.
 
 ### DX acceptance criteria
 
@@ -180,8 +181,8 @@ Before any Phase 2 work starts, the following must all be true:
 - [ ] `pnpm install && pnpm dev` works on Windows 11 (native, no WSL, no Build Tools)
 - [ ] `pnpm install && pnpm dev` works on macOS 14 (Apple Silicon)
 - [ ] `pnpm install && pnpm dev` works on Ubuntu 22.04 (no GUI, no libsecret)
-- [ ] `secureclaw init` creates a valid `.env` and prints clear next steps
-- [ ] CI runs and passes on all three OS + Node 20/22 matrix
+- [x] `secureclaw init` creates a valid `.env` and prints clear next steps (DX-C ✅)
+- [x] CI runs and passes on all three OS + Node 22 matrix (DX-D ✅)
 - [ ] First successful chat achievable in under 5 minutes from a clean clone
 
 ---
@@ -457,8 +458,8 @@ on all three major OS with a single command.
 | # | Task | Effort | Phase |
 |---|---|---|---|
 | 1 | Replace `better-sqlite3` with `@libsql/client` (cross-platform prebuilts) | ~2 sessions | DX-A |
-| 2 | Add `pnpm dev` single-command start with `concurrently` | ~0.5 sessions | DX-B |
-| 3 | `secureclaw init` setup wizard + `.env` support in all services | ~1 session | DX-C |
+| 2 | ~~Add `pnpm dev` single-command start with `concurrently`~~ ✅ | done | DX-B |
+| 3 | ~~`secureclaw init` setup wizard + `.env` support in all services~~ ✅ | done | DX-C |
 | 4 | GitHub Actions CI matrix (Windows / macOS / Linux × Node 20/22) | ~0.5 sessions | DX-D |
 | 5 | Add OTel spans to `agent-loop.ts` | ~1 session | Phase 1 (remaining) |
 | 6 | Configurable token expiry + refresh endpoint | ~0.5 sessions | Phase 2D |

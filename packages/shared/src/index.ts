@@ -14,6 +14,7 @@ export * from "./errors/index.js";
 export * from "./utils/crypto.utils.js";
 export * from "./utils/cost.utils.js";
 export * from "./utils/time.utils.js";
+export * from "./utils/env.js";
 
 // gRPC — proto loader, mTLS credential helpers, wire types
 export { loadProto, grpc, serverCredentials, clientCredentials } from "./grpc/loader.js";

@@ -28,6 +28,9 @@ export type { MarketplaceEntry, PublishResult } from "./marketplace.js";
 // ── Entry point ───────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  const { loadDotenv } = await import("@secureclaw/shared");
+  loadDotenv();
+
   const registryPath =
     process.env["SKILLS_REGISTRY_PATH"] ?? "/tmp/secureclaw-skills-registry.json";
   const marketplacePath =

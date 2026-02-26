@@ -1,0 +1,65 @@
+name: Cross-platform
+
+# Validates that the monorepo builds and tests cleanly on every supported
+# OS / Node combination before a change lands in main.
+#
+# Node version policy:
+#   - Node 22  → build + test  (minimum supported; node:sqlite unflagged in 22.13+)
+#   - Node 20  → build only    (node:sqlite not available; kept to verify TS compilation)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs for the same PR / branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-platform:
+    name: ${{ matrix.os }} / Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false   # surface all failures, not just the first one
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ["20", "22"]
+        include:
+          # node:sqlite requires Node 22.13+ — skip tests on Node 20
+          - node-version: "20"
+            run-tests: false
+          - node-version: "22"
+            run-tests: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      # Tests are skipped on Node 20 because node:sqlite (built-in SQLite)
+      # is only available unflagged in Node 22.13+.  The project's
+      # engines field ("node": ">=22.0.0") documents this requirement.
+      - name: Run unit tests
+        if: matrix.run-tests
+        run: pnpm -r test
+        env:
+          CI: "true"

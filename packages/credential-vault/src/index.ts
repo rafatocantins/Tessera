@@ -10,6 +10,9 @@ export type { SecretRef } from "./ref-store.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
+  const { loadDotenv } = await import("@secureclaw/shared");
+  loadDotenv();
+
   const { VaultService: Svc } = await import("./vault.service.js");
   const { startVaultGrpcServer: start } = await import("./grpc/server.js");
 

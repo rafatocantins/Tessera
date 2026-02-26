@@ -8,14 +8,19 @@ export { AgentGrpcClient } from "./grpc/agent.client.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
+  const { loadDotenv } = await import("@secureclaw/shared");
+  loadDotenv();
+
   const { AgentGrpcClient: Client } = await import("./grpc/agent.client.js");
   const { setGatewaySecret: setSecret, generateGatewayToken: genToken } = await import("./plugins/auth.plugin.js");
   const { startServer: start } = await import("./server.js");
 
-  const hmacSecret = process.env["GATEWAY_HMAC_SECRET"];
-  if (!hmacSecret) {
-    process.stderr.write("[gateway] FATAL: GATEWAY_HMAC_SECRET env var is required\n");
-    process.exit(1);
+  const hmacSecret = process.env["GATEWAY_HMAC_SECRET"] ?? "dev-insecure-change-me";
+  if (!process.env["GATEWAY_HMAC_SECRET"]) {
+    process.stderr.write(
+      "[gateway] WARNING: GATEWAY_HMAC_SECRET not set — using insecure dev default.\n" +
+      "[gateway]          Run 'secureclaw init' to generate secure secrets.\n"
+    );
   }
   setSecret(hmacSecret);
 

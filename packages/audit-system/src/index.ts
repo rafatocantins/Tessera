@@ -10,6 +10,9 @@ export type { AlertRule, AlertFinding, AlertContext } from "./alert-rules.js";
 // Called when this package is run directly: node dist/index.js
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
+  const { loadDotenv } = await import("@secureclaw/shared");
+  loadDotenv();
+
   const { createAuditDatabase: createDb } = await import("./database/connection.js");
   const { initSchema: init } = await import("./database/schema.js");
   const { AuditService: Svc } = await import("./audit.service.js");
