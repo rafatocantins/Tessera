@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      pnpm:
+        specifier: ^10.30.2
+        version: 10.30.3
     devDependencies:
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.0.0
@@ -121,16 +125,10 @@ importers:
       '@secureclaw/shared':
         specifier: workspace:*
         version: link:../shared
-      better-sqlite3:
-        specifier: ^11.0.0
-        version: 11.10.0
       zod:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.0
-        version: 7.6.13
       '@types/node':
         specifier: ^25.2.3
         version: 25.2.3
@@ -327,13 +325,7 @@ importers:
       '@secureclaw/shared':
         specifier: workspace:*
         version: link:../shared
-      better-sqlite3:
-        specifier: ^11.9.1
-        version: 11.10.0
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.12
-        version: 7.6.13
       '@types/node':
         specifier: ^25.2.3
         version: 25.2.3
@@ -2701,6 +2693,11 @@ packages:
 
   pino@10.3.1:
     resolution: {integrity: sha512-r34yH/GlQpKZbU1BvFFqOjhISRo1MNx1tWYsYvmj6KIRHSPMT2+yHOEb1SG6NMvRoHRF0a07kCOox/9yakl1vg==}
+    hasBin: true
+
+  pnpm@10.30.3:
+    resolution: {integrity: sha512-yWHR4KLY41TsqlFmuCJRZmi39Ey1vZUSLVkN2Bki9gb1RzttI+xKW+Bef80Y6EiNR9l4u+mBhy8RRdBumnQAFw==}
+    engines: {node: '>=18.12'}
     hasBin: true
 
   possible-typed-array-names@1.1.0:
@@ -5810,6 +5807,8 @@ snapshots:
       safe-stable-stringify: 2.5.0
       sonic-boom: 4.2.1
       thread-stream: 4.0.0
+
+  pnpm@10.30.3: {}
 
   possible-typed-array-names@1.1.0: {}
 

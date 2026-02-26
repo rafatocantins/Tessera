@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { initSchema } from "./db/schema.js";
 import { MemoryService } from "./memory.service.js";
 import type { AppendMessageParams, StoreSessionParams } from "./memory.service.js";
 
 // ── Test helpers ─────────────────────────────────────────────────────────────
 
-function makeDb(): Database.Database {
-  const db = new Database(":memory:");
+function makeDb(): DatabaseSync {
+  const db = new DatabaseSync(":memory:");
   initSchema(db);
   return db;
 }
 
-function makeService(): { db: Database.Database; svc: MemoryService } {
+function makeService(): { db: DatabaseSync; svc: MemoryService } {
   const db = makeDb();
   return { db, svc: new MemoryService(db) };
 }

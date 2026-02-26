@@ -5,9 +5,9 @@
  * UPDATE and DELETE are blocked by SQLite triggers at the database level.
  * This ensures forensic integrity — no event can be erased or modified.
  */
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 
-export function initSchema(db: Database.Database): void {
+export function initSchema(db: DatabaseSync): void {
   db.exec(`
     -- =====================================================================
     -- APPEND-ONLY audit events table

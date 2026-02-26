@@ -1,10 +1,10 @@
 /**
  * audit.service.ts — Core audit service implementation.
  *
- * All log writes are synchronous (better-sqlite3) to ensure durability.
+ * All log writes are synchronous (node:sqlite) to ensure durability.
  * Alert rules are evaluated after every write.
  */
-import type Database from "better-sqlite3";
+import { DatabaseSync, StatementSync } from "node:sqlite";
 import { nowUtcMs } from "@secureclaw/shared";
 import type { AuditEvent, AuditSeverity } from "@secureclaw/shared";
 import { ALERT_RULES, type AlertContext, type AlertFinding } from "./alert-rules.js";
@@ -59,15 +59,15 @@ export interface TeamCostSummaryResult {
 }
 
 export class AuditService {
-  private db: Database.Database;
+  private db: DatabaseSync;
   private costCapUsd: number;
 
   // Prepared statements (created once for performance)
-  private stmtInsertEvent!: Database.Statement;
-  private stmtInsertAlert!: Database.Statement;
-  private stmtUpdateSession!: Database.Statement;
+  private stmtInsertEvent!: StatementSync;
+  private stmtInsertAlert!: StatementSync;
+  private stmtUpdateSession!: StatementSync;
 
-  constructor(db: Database.Database, costCapUsd = 5.0) {
+  constructor(db: DatabaseSync, costCapUsd = 5.0) {
     this.db = db;
     this.costCapUsd = costCapUsd;
     this.prepareStatements();
@@ -142,7 +142,7 @@ export class AuditService {
     limit?: number;
   }): AuditEvent[] {
     let sql = "SELECT * FROM audit_events WHERE 1=1";
-    const args: unknown[] = [];
+    const args: (string | number | null)[] = [];
 
     if (params.session_id) {
       sql += " AND session_id = ?";
@@ -165,7 +165,7 @@ export class AuditService {
     args.push(params.limit ?? 100);
 
     type Row = { id: number; event_type: string; session_id: string | null; user_id: string | null; payload: string; severity: string; created_at: number };
-    const rows = this.db.prepare<unknown[], Row>(sql).all(...args);
+    const rows = this.db.prepare(sql).all(...args) as Row[];
 
     return rows.map((r) => ({
       id: r.id,
@@ -180,7 +180,7 @@ export class AuditService {
 
   getAlerts(params: { include_acknowledged?: boolean; session_id?: string }): unknown[] {
     let sql = "SELECT * FROM alerts WHERE 1=1";
-    const args: unknown[] = [];
+    const args: (string | number | null)[] = [];
 
     if (!params.include_acknowledged) {
       sql += " AND acknowledged = 0";
@@ -191,7 +191,7 @@ export class AuditService {
     }
 
     sql += " ORDER BY created_at DESC";
-    return this.db.prepare<unknown[], unknown>(sql).all(...args);
+    return this.db.prepare(sql).all(...args);
   }
 
   acknowledgeAlert(alertId: number): boolean {
@@ -207,11 +207,11 @@ export class AuditService {
     const dayEnd = dayStart + 86_400_000;
 
     type CostRow = { model: string; total: number };
-    const rows = this.db
-      .prepare<[string, number, number], CostRow>(
+    const rows = (this.db
+      .prepare(
         "SELECT model, SUM(cost_usd) as total FROM cost_ledger WHERE user_id = ? AND recorded_at >= ? AND recorded_at < ? GROUP BY model"
       )
-      .all(userId, dayStart, dayEnd);
+      .all(userId, dayStart, dayEnd)) as CostRow[];
 
     const cost_by_model: Record<string, number> = {};
     let total_cost_usd = 0;
@@ -265,9 +265,9 @@ export class AuditService {
   getComplianceReport(fromMs: number, toMs: number): ComplianceReportResult {
     type CountRow = { count: number };
     const countEvent = (type: string): number =>
-      this.db.prepare<[string, number, number], CountRow>(
+      (this.db.prepare(
         "SELECT COUNT(*) as count FROM audit_events WHERE event_type=? AND created_at>=? AND created_at<=?"
-      ).get(type, fromMs, toMs)?.count ?? 0;
+      ).get(type, fromMs, toMs) as CountRow | undefined)?.count ?? 0;
 
     const approvalRequested = countEvent("APPROVAL_REQUESTED");
     const approvalGranted   = countEvent("APPROVAL_GRANTED");
@@ -277,9 +277,9 @@ export class AuditService {
     const injectionDetected = countEvent("INJECTION_DETECTED");
     const sandboxErrors     = countEvent("SANDBOX_ERROR");
     const totalEvents       =
-      this.db.prepare<[number, number], CountRow>(
+      (this.db.prepare(
         "SELECT COUNT(*) as count FROM audit_events WHERE created_at>=? AND created_at<=?"
-      ).get(fromMs, toMs)?.count ?? 0;
+      ).get(fromMs, toMs) as CountRow | undefined)?.count ?? 0;
 
     // Article 14: oversight_rate = approvals resolved / requested
     const oversightRate = approvalRequested === 0 ? 1
@@ -333,13 +333,13 @@ export class AuditService {
 
     let rows: CostRow[];
     if (teamId) {
-      rows = this.db.prepare<[string, number, number], CostRow>(
+      rows = this.db.prepare(
         "SELECT team_id, user_id, model, SUM(cost_usd) as total_cost_usd, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens FROM cost_ledger WHERE team_id=? AND recorded_at>=? AND recorded_at<=? GROUP BY team_id, user_id, model"
-      ).all(teamId, fromMs, toMs);
+      ).all(teamId, fromMs, toMs) as CostRow[];
     } else {
-      rows = this.db.prepare<[number, number], CostRow>(
+      rows = this.db.prepare(
         "SELECT team_id, user_id, model, SUM(cost_usd) as total_cost_usd, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens FROM cost_ledger WHERE recorded_at>=? AND recorded_at<=? GROUP BY team_id, user_id, model"
-      ).all(fromMs, toMs);
+      ).all(fromMs, toMs) as CostRow[];
     }
 
     // Aggregate by team
@@ -367,13 +367,13 @@ export class AuditService {
     type SessionCountRow = { team_id: string; session_count: number };
     let sessionRows: SessionCountRow[];
     if (teamId) {
-      sessionRows = this.db.prepare<[string, number, number], SessionCountRow>(
+      sessionRows = this.db.prepare(
         "SELECT team_id, COUNT(DISTINCT session_id) as session_count FROM cost_ledger WHERE team_id=? AND recorded_at>=? AND recorded_at<=? GROUP BY team_id"
-      ).all(teamId, fromMs, toMs);
+      ).all(teamId, fromMs, toMs) as SessionCountRow[];
     } else {
-      sessionRows = this.db.prepare<[number, number], SessionCountRow>(
+      sessionRows = this.db.prepare(
         "SELECT team_id, COUNT(DISTINCT session_id) as session_count FROM cost_ledger WHERE recorded_at>=? AND recorded_at<=? GROUP BY team_id"
-      ).all(fromMs, toMs);
+      ).all(fromMs, toMs) as SessionCountRow[];
     }
     for (const sr of sessionRows) {
       const entry = teamMap.get(sr.team_id);
@@ -394,27 +394,27 @@ export class AuditService {
     type CountRow = { count: number };
 
     const toolCallsLastMinute = sessionId
-      ? (this.db
-          .prepare<[string, number], CountRow>(
+      ? ((this.db
+          .prepare(
             "SELECT COUNT(*) as count FROM audit_events WHERE event_type = 'TOOL_CALL' AND session_id = ? AND created_at >= ?"
           )
-          .get(sessionId, oneMinuteAgo)?.count ?? 0)
+          .get(sessionId, oneMinuteAgo) as CountRow | undefined)?.count ?? 0)
       : 0;
 
     const authFailuresLastFiveMin =
-      this.db
-        .prepare<[number], CountRow>(
+      (this.db
+        .prepare(
           "SELECT COUNT(*) as count FROM audit_events WHERE event_type = 'AUTH_FAILED' AND created_at >= ?"
         )
-        .get(fiveMinutesAgo)?.count ?? 0;
+        .get(fiveMinutesAgo) as CountRow | undefined)?.count ?? 0;
 
     type CostRow = { total: number };
     const dailyCostUsd =
-      this.db
-        .prepare<[number], CostRow>(
+      (this.db
+        .prepare(
           "SELECT COALESCE(SUM(cost_usd), 0) as total FROM cost_ledger WHERE recorded_at >= ?"
         )
-        .get(todayStart)?.total ?? 0;
+        .get(todayStart) as CostRow | undefined)?.total ?? 0;
 
     return {
       toolCallsLastMinute,

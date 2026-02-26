@@ -1,10 +1,10 @@
 /**
  * memory.service.ts — Core business logic for the memory store.
  *
- * All database operations are synchronous (better-sqlite3).
+ * All database operations are synchronous (node:sqlite).
  * Prepared statements are compiled once in the constructor.
  */
-import type Database from "better-sqlite3";
+import { DatabaseSync, StatementSync } from "node:sqlite";
 
 export interface StoredMessage {
   id: number;
@@ -46,17 +46,17 @@ export interface FinalizeSessionParams {
 }
 
 export class MemoryService {
-  private readonly db: Database.Database;
+  private readonly db: DatabaseSync;
 
   // Compiled prepared statements
-  private stmtUpsertSession!: Database.Statement;
-  private stmtFinalizeSession!: Database.Statement;
-  private stmtInsertMessage!: Database.Statement;
-  private stmtRecentMessages!: Database.Statement;
-  private stmtCountUserMessages!: Database.Statement;
-  private stmtDeleteUserSessions!: Database.Statement;
+  private stmtUpsertSession!: StatementSync;
+  private stmtFinalizeSession!: StatementSync;
+  private stmtInsertMessage!: StatementSync;
+  private stmtRecentMessages!: StatementSync;
+  private stmtCountUserMessages!: StatementSync;
+  private stmtDeleteUserSessions!: StatementSync;
 
-  constructor(db: Database.Database) {
+  constructor(db: DatabaseSync) {
     this.db = db;
     this.prepareStatements();
   }
@@ -152,7 +152,7 @@ export class MemoryService {
    */
   getRecentMessages(userId: string, limit = 30): StoredMessage[] {
     const capped = Math.min(limit, 100);
-    const rows = this.stmtRecentMessages.all(userId, capped) as StoredMessage[];
+    const rows = this.stmtRecentMessages.all(userId, capped) as unknown as StoredMessage[];
     // SQL returned most-recent-first; reverse for chronological LLM order
     return rows.reverse();
   }
@@ -164,7 +164,7 @@ export class MemoryService {
   searchMessages(userId: string, query: string, limit = 20): StoredMessage[] {
     const capped = Math.min(limit, 100);
     const rows = this.db
-      .prepare<[string, string, number], StoredMessage>(
+      .prepare(
         `SELECT m.id, m.session_id, m.user_id, m.role, m.content,
                 m.tool_calls_json, m.tool_call_id, m.tool_name, m.created_at
          FROM messages m
@@ -174,7 +174,7 @@ export class MemoryService {
          ORDER BY rank
          LIMIT ?`
       )
-      .all(query, userId, capped);
+      .all(query, userId, capped) as unknown as StoredMessage[];
     return rows;
   }
 

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { initSchema } from "./schema.js";
 
-function makeDb(): Database.Database {
-  const db = new Database(":memory:");
+function makeDb(): DatabaseSync {
+  const db = new DatabaseSync(":memory:");
   initSchema(db);
   return db;
 }
@@ -12,7 +12,7 @@ function makeDb(): Database.Database {
 // audit_events — fully append-only
 // ──────────────────────────────────────────────────────────────────────────────
 describe("audit_events — append-only enforcement", () => {
-  let db: Database.Database;
+  let db: DatabaseSync;
 
   beforeEach(() => {
     db = makeDb();
@@ -65,7 +65,7 @@ describe("audit_events — append-only enforcement", () => {
 // sessions — allows UPDATE (for cost accumulation), blocks DELETE
 // ──────────────────────────────────────────────────────────────────────────────
 describe("sessions — append-only enforcement (no delete, update allowed)", () => {
-  let db: Database.Database;
+  let db: DatabaseSync;
 
   beforeEach(() => {
     db = makeDb();
@@ -103,7 +103,7 @@ describe("sessions — append-only enforcement (no delete, update allowed)", () 
 // alerts — allows UPDATE (for acknowledgment), blocks DELETE
 // ──────────────────────────────────────────────────────────────────────────────
 describe("alerts — append-only enforcement (no delete, acknowledgment allowed)", () => {
-  let db: Database.Database;
+  let db: DatabaseSync;
 
   beforeEach(() => {
     db = makeDb();
@@ -139,7 +139,7 @@ describe("alerts — append-only enforcement (no delete, acknowledgment allowed)
 // cost_ledger — fully append-only
 // ──────────────────────────────────────────────────────────────────────────────
 describe("cost_ledger — append-only enforcement", () => {
-  let db: Database.Database;
+  let db: DatabaseSync;
 
   beforeEach(() => {
     db = makeDb();

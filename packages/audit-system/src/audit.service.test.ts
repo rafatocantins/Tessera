@@ -5,17 +5,17 @@
  * getTeamCostSummary, and getComplianceReport.
  */
 import { describe, it, expect, beforeEach } from "vitest";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { initSchema } from "./database/schema.js";
 import { AuditService } from "./audit.service.js";
 
-function makeDb(): Database.Database {
-  const db = new Database(":memory:");
+function makeDb(): DatabaseSync {
+  const db = new DatabaseSync(":memory:");
   initSchema(db);
   return db;
 }
 
-function makeSvc(db?: Database.Database): AuditService {
+function makeSvc(db?: DatabaseSync): AuditService {
   return new AuditService(db ?? makeDb());
 }
 

@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 
 /**
  * Initialize the memory-store SQLite schema.
@@ -12,7 +12,7 @@ import type Database from "better-sqlite3";
  *   messages_fts — external-content FTS5 index over messages.content
  *   Triggers keep the index in sync after INSERT and DELETE on messages.
  */
-export function initSchema(db: Database.Database): void {
+export function initSchema(db: DatabaseSync): void {
   db.exec(`
     -- =========================================================================
     -- sessions
