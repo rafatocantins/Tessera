@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../");
 
 const COMPOSE_FILES = [
+  "-f docker-compose.yml",
   "-f docker-compose.dev.yml",
   "-f packages/integration/docker-compose.test.yml",
 ].join(" ");
@@ -24,11 +25,20 @@ export const HMAC_SECRET =
   process.env["GATEWAY_HMAC_SECRET"] ??
   "dev-insecure-hmac-secret-change-in-prod";
 
+// Dev defaults for :?required variables in docker-compose.yml.
+// These match the hardcoded values in docker-compose.dev.yml so no real
+// secrets are needed to run integration tests locally or in CI.
+const DEV_ENV: Record<string, string> = {
+  GATEWAY_HMAC_SECRET: HMAC_SECRET,
+  VAULT_MASTER_KEY:
+    process.env["VAULT_MASTER_KEY"] ?? "dev-insecure-vault-key-change-in-prod",
+};
+
 export function composeUp(extraEnv?: Record<string, string>): void {
   execSync(`${BASE_CMD} up -d`, {
     cwd: REPO_ROOT,
     stdio: "pipe",
-    env: { ...process.env, ...extraEnv },
+    env: { ...process.env, ...DEV_ENV, ...extraEnv },
   });
 }
 
@@ -36,6 +46,7 @@ export function composeDown(): void {
   execSync(`${BASE_CMD} down -v`, {
     cwd: REPO_ROOT,
     stdio: "pipe",
+    env: { ...process.env, ...DEV_ENV },
   });
 }
 

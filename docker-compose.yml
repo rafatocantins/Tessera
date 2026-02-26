@@ -1,5 +1,3 @@
-version: "3.9"
-
 # SecureClaw Production Compose
 # Security hardening:
 # - All services run as non-root UID 10001
@@ -219,7 +217,9 @@ services:
     restart: unless-stopped
 
   # ── Telegram Channel ────────────────────────────────────────────────────────
+  # Start with: docker compose --profile channels up -d
   channel-telegram:
+    profiles: ["channels"]
     build:
       context: .
       dockerfile: docker/telegram.Dockerfile
@@ -228,8 +228,8 @@ services:
     environment:
       NODE_ENV: production
       GATEWAY_URL: "http://gateway:18789"
-      GATEWAY_HMAC_SECRET: "${GATEWAY_HMAC_SECRET:?GATEWAY_HMAC_SECRET is required}"
-      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}"
+      GATEWAY_HMAC_SECRET: "${GATEWAY_HMAC_SECRET:-}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
     cap_drop:
       - ALL
     security_opt:
@@ -240,7 +240,9 @@ services:
         condition: service_healthy
 
   # ── Slack Channel ───────────────────────────────────────────────────────────
+  # Start with: docker compose --profile channels up -d
   channel-slack:
+    profiles: ["channels"]
     build:
       context: .
       dockerfile: docker/slack.Dockerfile
@@ -249,9 +251,9 @@ services:
     environment:
       NODE_ENV: production
       GATEWAY_URL: "http://gateway:18789"
-      GATEWAY_HMAC_SECRET: "${GATEWAY_HMAC_SECRET:?GATEWAY_HMAC_SECRET is required}"
-      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:?SLACK_BOT_TOKEN is required}"
-      SLACK_APP_TOKEN: "${SLACK_APP_TOKEN:?SLACK_APP_TOKEN is required}"
+      GATEWAY_HMAC_SECRET: "${GATEWAY_HMAC_SECRET:-}"
+      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
+      SLACK_APP_TOKEN: "${SLACK_APP_TOKEN:-}"
     cap_drop:
       - ALL
     security_opt:

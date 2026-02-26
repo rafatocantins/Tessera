@@ -1,5 +1,3 @@
-version: "3.9"
-
 # SecureClaw Development Compose — extends docker-compose.yml
 # Overrides for local development:
 # - SECURECLAW_ALLOW_RUNC=true (skip gVisor check if not installed)
@@ -68,12 +66,14 @@ services:
       LOG_LEVEL: debug
 
   channel-telegram:
+    profiles: ["channels"]
     environment:
       NODE_ENV: development
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
       SECURECLAW_LOG_LEVEL: debug
 
   channel-slack:
+    profiles: ["channels"]
     environment:
       NODE_ENV: development
       SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"

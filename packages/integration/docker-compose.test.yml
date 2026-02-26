@@ -1,11 +1,20 @@
-# Integration test overrides — merged on top of docker-compose.dev.yml.
+# Integration test overrides — merged on top of docker-compose.yml + docker-compose.dev.yml.
 #
 # Usage (handled automatically by global-setup.ts):
-#   docker compose -f docker-compose.dev.yml -f packages/integration/docker-compose.test.yml up -d
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.dev.yml \
+#     -f packages/integration/docker-compose.test.yml up -d
 #
 # host.docker.internal resolves to the host machine so agent-runtime can reach
 # the mock LLM server that runs in the test process.  On macOS this name works
 # out of the box; the extra_hosts entry makes it work on Linux as well.
+
+# Override certs volume: integration tests don't use mTLS, so create a local
+# empty volume instead of requiring the external one from scripts/gen-certs.sh.
+volumes:
+  certs:
+
 services:
   agent-runtime:
     extra_hosts:
