@@ -17,6 +17,7 @@ SecureClaw is a production-ready, self-hosted AI agent platform built around the
 | Rogue tool approvals | High-risk tools pause and require explicit human approval before execution |
 | Audit gaps | Append-only SQLite log; triggers block UPDATE/DELETE at the database level |
 | Untrusted skill bundles | Ed25519-signed manifests with pinned image digests; signature verified on every install |
+| No compliance evidence | EU AI Act dashboard exports audit-derived evidence for Articles 9, 12, 14, 15 |
 
 ---
 
@@ -32,26 +33,27 @@ SecureClaw is a production-ready, self-hosted AI agent platform built around the
 │             │          │  LLM loop        │
 │  Auth       │          │  Policy engine   │
 │  Rate limit │          │  Approval gate   │
-│  CORS       │          └──────┬───────────┘
-└─────────────┘                 │ gRPC (mTLS)
-                                │
-          ┌─────────────────────┼────────────────────┐
-          │                     │                    │
-          ▼                     ▼                    ▼
+│  CORS       │          │  OTel tracing    │
+└─────────────┘          └──────┬───────────┘
+                                │ gRPC
+          ┌─────────────────────┼──────────────────────┐
+          │                     │                      │
+          ▼                     ▼                      ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
 │ Credential Vault │  │  Audit System    │  │ Sandbox Runtime  │
 │ :19002           │  │  :19003          │  │ :19004           │
-│ OS keychain      │  │  Append-only     │  │ gVisor (runsc)   │
-│ Secret injection │  │  SQLite + alerts │  │ per-tool containers│
-└──────────────────┘  └──────────────────┘  └──────────────────┘
-                                                      ▲
-                                                      │ gRPC
-                                             ┌──────────────────┐
-                                             │  Skills Engine   │
-                                             │  :19005          │
-                                             │  Ed25519 verify  │
-                                             │  Signed bundles  │
-                                             └──────────────────┘
+│ OS keychain /    │  │  Append-only     │  │ gVisor (runsc)   │
+│ AES-256-GCM file │  │  SQLite, costs,  │  │ per-tool containers│
+└──────────────────┘  │  compliance      │  └──────────────────┘
+                      └──────────────────┘          ▲
+                                                    │ gRPC
+                      ┌──────────────────┐  ┌──────────────────┐
+                      │  Memory Store    │  │  Skills Engine   │
+                      │  :19006          │  │  :19005          │
+                      │  SQLite + FTS5   │  │  Ed25519 verify  │
+                      │  Conversation    │  │  Signed bundles  │
+                      │  history         │  │  Marketplace     │
+                      └──────────────────┘  └──────────────────┘
 ```
 
 All internal communication uses gRPC with optional mTLS. The gateway is the only service exposed to the network — bound to `127.0.0.1` by default.
@@ -62,51 +64,54 @@ All internal communication uses gRPC with optional mTLS. The gateway is the only
 
 ### Prerequisites
 
-- Node.js ≥ 22
-- pnpm ≥ 9
-- Docker with Compose plugin
+- **Node.js ≥ 22.13** (required for built-in `node:sqlite`)
+- **pnpm ≥ 9** — `npm install -g pnpm`
+- **Docker with Compose plugin** — only needed for tool sandboxing and production stack
 - (Optional) [gVisor](https://gvisor.dev/docs/user_guide/install/) for full sandbox isolation
 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-username/secureclaw.git
+git clone https://github.com/rafatocantins/secureclaw.git
 cd secureclaw
 pnpm install
+pnpm build
 ```
 
-### 2. Configure
+### 2. Set up secrets
 
 ```bash
-cp .env.example .env
-# Edit .env — at minimum set one LLM API key:
-# ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, or OLLAMA_BASE_URL
+secureclaw init
 ```
+
+This interactive wizard generates cryptographically secure `GATEWAY_HMAC_SECRET` and `VAULT_MASTER_KEY`, prompts for your Anthropic API key (optional — press Enter to skip for Ollama), and writes a `.env` file with mode `0600`. Run it once per install.
 
 ### 3. Start
 
 ```bash
-bash scripts/start-dev.sh
+pnpm dev
 ```
 
-This script checks prerequisites, generates a `GATEWAY_HMAC_SECRET` if missing, and starts all services via Docker Compose.
+All 8 services + the Control UI start in parallel with colour-coded output. Any service crash is immediately visible and labelled. The gateway prints a dev token at startup.
 
 ### 4. Verify
 
 ```bash
 curl http://127.0.0.1:18789/health
-# → {"status":"ok","version":"0.1.0"}
+# → {"status":"ok"}
 ```
 
 ### 5. Connect
 
 ```bash
-# Generate a token
-npx secureclaw token generate --user dev
+# Generate a bearer token
+node packages/cli/dist/bin.js token generate --user dev-user
 
-# Open the webchat client
-open packages/channels/webchat/src/static/client.html
-# Enter the gateway URL and token — start chatting
+# Open the Control UI
+open http://127.0.0.1:5173
+
+# Or open the webchat client directly
+open packages/channel-webchat/src/static/client.html
 ```
 
 ---
@@ -116,33 +121,40 @@ open packages/channels/webchat/src/static/client.html
 | Service | Port | Description |
 |---|---|---|
 | **gateway** | `18789` | HTTP/WebSocket API gateway. Auth, rate limiting, CORS. |
-| **agent-runtime** | `19001` | LLM loop, tool policy, approval gate. |
-| **credential-vault** | `19002` | OS-native secret storage with vault ref injection. |
-| **audit-system** | `19003` | Append-only audit log, cost tracking, anomaly alerts. |
+| **agent-runtime** | `19001` | LLM loop, tool policy, approval gate, OTel tracing. |
+| **credential-vault** | `19002` | OS keychain (keytar) or AES-256-GCM file fallback. |
+| **audit-system** | `19003` | Append-only audit log, cost tracking, EU AI Act compliance. |
 | **sandbox-runtime** | `19004` | gVisor container execution for all tool calls. |
-| **skills-engine** | `19005` | Versioned, Ed25519-signed tool bundle management. |
+| **skills-engine** | `19005` | Versioned, Ed25519-signed tool bundle registry and marketplace. |
+| **memory-store** | `19006` | Persistent conversation history with SQLite + FTS5 search. |
+| **control-ui** | `5173` | React dashboard (Vite). Approvals, audit, compliance, costs, marketplace. |
 
 ---
 
 ## Configuration
 
-All configuration is via environment variables. See [`.env.example`](.env.example) for the full reference.
+All configuration is via environment variables. Run `secureclaw init` to generate a `.env` file automatically. See [`.env.example`](.env.example) for the full reference.
+
+All services load `.env` from the working directory at startup — no manual `export` needed.
 
 ### Required
 
 | Variable | Description |
 |---|---|
-| `GATEWAY_HMAC_SECRET` | Secret for signing auth tokens. Min 32 chars. |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | At least one LLM provider key. |
+| `GATEWAY_HMAC_SECRET` | Secret for signing auth tokens. 64 hex chars (generated by `secureclaw init`). |
+| `VAULT_MASTER_KEY` | AES-256-GCM key for the encrypted-file vault fallback. 64 hex chars. |
+| `ANTHROPIC_API_KEY` | Anthropic API key. Or set `OLLAMA_BASE_URL` for local models. |
 
 ### Key optional settings
 
 | Variable | Default | Description |
 |---|---|---|
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | LLM model to use. |
 | `GATEWAY_HOST` | `127.0.0.1` | Bind address. Never change to `0.0.0.0` without a reverse proxy. |
+| `GATEWAY_PORT` | `18789` | Gateway listen port. |
 | `SECURECLAW_ALLOW_RUNC` | `false` | Dev escape hatch — disables gVisor check. **Never use in production.** |
-| `GRPC_TLS` | `false` | Enable mTLS between services. Run `bash scripts/gen-certs.sh` first. |
-| `SECURECLAW_LOG_LEVEL` | `info` | `trace` \| `debug` \| `info` \| `warn` \| `error` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP endpoint for distributed tracing (Jaeger, Grafana Tempo, etc.). |
+| `AUDIT_COST_CAP_USD` | `5.0` | Daily per-user spend cap in USD. |
 
 ---
 
@@ -157,12 +169,12 @@ Every tool call, without exception, runs inside a gVisor (`runsc`) container:
 - Time-limited (configurable per tool)
 
 ### Credentials
-- Secrets are stored in the OS native keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+- Secrets are stored in the OS native keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager) or fall back to an AES-256-GCM encrypted file on headless Linux/WSL/CI
 - The LLM **never** sees a credential value — only a `__VAULT_REF:ref_id__` placeholder
 - The vault injects the real value into the sandboxed tool's input at execution time
 
 ### Human Approval
-High-risk tools (`shell_exec`, `file_write`, `http_request` by default) pause before execution and emit a `tool_pending` event. The agent loop blocks until the user approves or denies via the gateway's `/approve` endpoint or WebSocket message.
+High-risk tools (`shell_exec`, `file_write`, `http_request` by default) pause before execution and emit a `tool_pending` event. The agent loop blocks until the user approves or denies via the Control UI or the gateway's `/approve` endpoint.
 
 ### Prompt Injection Defense
 - Cryptographically random session delimiters wrap all system context
@@ -180,6 +192,15 @@ Skill bundles (third-party tools) must be signed with an Ed25519 key:
 - All tool images must have pinned `sha256:` digest — no floating tags
 - Optional trust-key-set enforcement: only keys you've explicitly trusted can install skills
 
+### Observability
+When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, agent-runtime exports OpenTelemetry traces covering the full session hierarchy:
+```
+agent.session → gen_ai.chat → gen_ai.usage.*
+             → secureclaw.tool.run → secureclaw.tool.*
+             → secureclaw.approval.wait → secureclaw.approval.*
+```
+Zero overhead when the endpoint is unset (NoopTracerProvider).
+
 ---
 
 ## CLI
@@ -188,18 +209,23 @@ Skill bundles (third-party tools) must be signed with an Ed25519 key:
 # Install globally
 npm install -g @secureclaw/cli
 
-# Or use via pnpm in the monorepo
-pnpm --filter @secureclaw/cli exec secureclaw <command>
+# Or run directly from the monorepo
+node packages/cli/dist/bin.js <command>
 ```
 
 ### Commands
 
 ```bash
-secureclaw token generate --user <userId>     # Generate a bearer token
-secureclaw session create [--provider anthropic]  # Start an agent session
-secureclaw session status <sessionId>          # Get session status
-secureclaw session delete <sessionId>          # Terminate a session
-secureclaw health [--url <url>]                # Check gateway health
+secureclaw init                                    # First-run wizard: generate secrets, write .env
+secureclaw token generate --user <userId>          # Generate a bearer token
+secureclaw health [--url <url>]                    # Check gateway health
+secureclaw session create [--provider anthropic]   # Start an agent session
+secureclaw session status <sessionId>              # Get session status
+secureclaw session delete <sessionId>              # Terminate a session
+secureclaw skill list     [--search <q>]           # Browse the marketplace
+secureclaw skill publish  <manifest.json> [--trivy] # Publish a skill
+secureclaw skill install  <ns/name[@ver]>          # Install from marketplace
+secureclaw skill installed                         # List installed skills
 ```
 
 ---
@@ -253,12 +279,8 @@ const canonical = canonicalSkillPayload(parsed);
 const signature = signEd25519(privateKey, canonical);
 const signed = JSON.stringify({ ...parsed, signature });
 
-// 4. Install
-await fetch("http://127.0.0.1:18789/api/v1/skills", {
-  method: "POST",
-  headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-  body: JSON.stringify({ manifest_json: signed }),
-});
+// 4. Publish to marketplace
+secureclaw skill publish manifest.json --trivy
 ```
 
 ---
@@ -272,14 +294,20 @@ pnpm install
 # Build all packages
 pnpm build
 
-# Run all tests
+# Run all tests (228 passing)
 pnpm test
 
 # Type-check all packages
 pnpm typecheck
 
-# Start dev stack (hot reload)
-bash scripts/start-dev.sh
+# First-run setup (generates .env)
+secureclaw init
+
+# Start all services + Control UI
+pnpm dev
+
+# Backend only (no Vite UI)
+pnpm dev:services
 
 # Generate mTLS certificates (if using GRPC_TLS=true)
 bash scripts/gen-certs.sh
@@ -290,25 +318,27 @@ bash scripts/gen-certs.sh
 ```
 secureclaw/
 ├── packages/
-│   ├── shared/            # Schemas, crypto utils, gRPC types, proto files
+│   ├── shared/            # Schemas, crypto utils, gRPC types, proto files, loadDotenv
 │   ├── gateway/           # Fastify HTTP/WebSocket gateway
-│   ├── agent-runtime/     # LLM loop, policy engine, approval gate
-│   ├── credential-vault/  # Secret storage and vault ref injection
-│   ├── audit-system/      # Append-only event log and cost tracking
+│   ├── agent-runtime/     # LLM loop, policy engine, approval gate, OTel spans
+│   ├── credential-vault/  # OS keychain + AES-256-GCM file fallback
+│   ├── audit-system/      # Append-only event log, cost tracking, EU AI Act compliance
 │   ├── sandbox-runtime/   # gVisor container manager
-│   ├── skills-engine/     # Signed skill bundle registry and executor
+│   ├── skills-engine/     # Signed skill bundle registry, executor, marketplace
 │   ├── input-sanitizer/   # Injection detection and PII redaction
-│   ├── memory-store/      # (Phase 2) Persistent conversation memory
-│   ├── cli/               # `secureclaw` CLI tool
+│   ├── memory-store/      # Persistent conversation memory (SQLite + FTS5)
+│   ├── cli/               # `secureclaw` CLI (init, token, session, skill, health)
 │   └── channels/
 │       └── webchat/       # Browser WebSocket test client
 ├── apps/
-│   └── control-ui/        # (Phase 2) React dashboard
+│   └── control-ui/        # React dashboard (Vite) — 7 tabs
 ├── docker/                # Dockerfiles for each service
-├── scripts/               # gen-certs.sh, start-dev.sh
-├── .github/workflows/     # CI: secret scan, typecheck, tests, Trivy
+├── scripts/               # gen-certs.sh
+├── .github/workflows/
+│   ├── ci.yml             # Secret scan, typecheck, tests, Trivy, integration
+│   └── cross-platform.yml # OS × Node matrix (ubuntu/windows/macos × 20/22)
 ├── docker-compose.yml     # Production stack
-├── docker-compose.dev.yml # Development overrides
+├── docker-compose.dev.yml # Development overrides + optional Jaeger tracing
 └── .env.example           # All environment variables documented
 ```
 
@@ -318,24 +348,46 @@ secureclaw/
 
 GitHub Actions runs on every push to `main`/`develop` and on PRs:
 
+**`ci.yml`** — full quality gate:
 1. **Secret scan** — blocks `.env` files and hardcoded API keys (gitleaks)
 2. **Quality** — typecheck + lint for every package
 3. **Tests** — unit tests with coverage upload (codecov)
 4. **Dependency audit** — `pnpm audit --audit-level=high`
-5. **Docker build + Trivy scan** — CRITICAL/HIGH vulnerability scan for each image
+5. **Docker build + Trivy scan** — CRITICAL/HIGH vulnerability scan for each service image
 6. **Full build** — `pnpm -r build` across the entire monorepo
-7. **Compose validate** — syntax-checks docker-compose.yml
+7. **Integration tests** — full Docker Compose stack with mock LLM
+8. **Compose validate** — syntax-checks docker-compose.yml
+
+**`cross-platform.yml`** — platform compatibility matrix:
+
+| | Node 20 | Node 22 |
+|---|---|---|
+| ubuntu-latest | build | build + test |
+| windows-latest | build | build + test |
+| macos-latest | build | build + test |
+
+Node 20 is build-only because `node:sqlite` (built-in SQLite) requires Node 22.13+.
 
 ---
 
 ## Roadmap
 
-- [x] Phase 1: Core agent loop, gRPC services, mTLS, cost caps, audit log
-- [x] Phase 2a: Skills engine (Ed25519-signed tool bundles, per-skill sandboxing)
-- [ ] Phase 2b: Memory store (persistent conversation memory, semantic search)
-- [ ] Phase 2c: Control UI (dashboard, audit viewer, approval queue)
-- [ ] Messaging channels: Telegram, Slack, Discord, WhatsApp, Teams
-- [ ] Integration test suite
+- [x] Core agent loop, gRPC services, mTLS, cost caps, audit log
+- [x] Skills engine (Ed25519-signed tool bundles, per-skill sandboxing)
+- [x] Persistent conversation memory (SQLite + FTS5 semantic search)
+- [x] Control UI (dashboard, audit viewer, approval queue, 7 tabs)
+- [x] EU AI Act compliance dashboard (Articles 9, 12, 14, 15)
+- [x] Cost showback / chargeback (team attribution, CSV export)
+- [x] Skills marketplace (publish, list, install, Trivy scan, download counts)
+- [x] OpenTelemetry tracing (agent.session → gen_ai.chat → tool.run → approval.wait)
+- [x] Dual-backend credential vault (OS keychain + AES-256-GCM file fallback)
+- [x] Single-command dev start (`pnpm dev` via concurrently)
+- [x] First-run setup wizard (`secureclaw init`)
+- [x] Cross-platform CI matrix (Windows × macOS × Linux × Node 20/22)
+- [ ] Configurable token expiry + refresh endpoint
+- [ ] Hard per-team spending quotas + webhook alerting
+- [ ] Vault key rotation CLI command
+- [ ] RBAC / SSO / OIDC
 - [ ] Kubernetes deployment manifests
 
 ---

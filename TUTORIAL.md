@@ -1,7 +1,7 @@
 # SecureClaw — Testing & Usage Guide
 
 This guide covers everything you need to build, start, and test SecureClaw
-end-to-end on your own machine. The guide assumes **Node.js 20+**, **pnpm 9+**,
+end-to-end on your own machine. The guide assumes **Node.js 22.13+**, **pnpm 9+**,
 and a terminal. Windows users: read the Windows-specific section below before
 starting.
 
@@ -33,15 +33,19 @@ starting.
 
 | Requirement | Minimum version | Check |
 |---|---|---|
-| Node.js | 20.x LTS | `node --version` |
-| npm  | 9.x | `pnpm --version` |
+| Node.js | **22.13** LTS | `node --version` |
+| pnpm | 9.x | `pnpm --version` |
 | Git | any | `git --version` |
+
+> **Why 22.13?** SecureClaw uses Node.js's built-in `node:sqlite` module
+> (no native compilation, no `node-gyp`, no Visual Studio Build Tools).
+> This module is unflagged from Node.js 22.13 onwards.
 
 Optional (for specific features):
 
 - **An Anthropic API key** — required to get real LLM responses.
   Without it the agent starts and connects, but all chat returns a provider
-  error.  Set `ANTHROPIC_API_KEY` in your shell.
+  error. Set it via `secureclaw init` or in `.env`.
 - **Docker Desktop** — only needed for the sandbox runtime (tool execution)
   and for the Docker Compose production stack.
 - **Trivy** — only needed for `secureclaw skill publish --trivy`.
@@ -70,96 +74,100 @@ pnpm --filter '@secureclaw/gateway' build
 
 ## 3. Start the services
 
-Open **six terminal tabs** (or use a process manager such as `pm2`).
-Run each command in the repository root.
+### Option A — One command (recommended)
 
-### Tab 1 — Audit system (port 19003)
+Run these two commands in the repository root, **first time only**:
 
+```bash
+# Generate secrets, create .env, and print next steps
+secureclaw init
+```
+
+Follow the prompts:
+- Press **Enter** to accept the default model (`claude-sonnet-4-6`)
+- Paste an **Anthropic API key** when asked (or press Enter to skip for Ollama / offline use)
+- Press **Enter** to skip the Ollama URL unless you use a local model
+
+Once `.env` exists, start everything:
+
+```bash
+pnpm dev
+```
+
+`pnpm dev` launches all 8 services and the Control UI in parallel with
+colour-coded, labelled output. Any crash is immediately visible. Press
+`Ctrl+C` to stop everything.
+
+Expected output (first few seconds):
+```
+[vault]   [vault-grpc] Server listening on 0.0.0.0:19002
+[audit]   [audit-grpc] Server listening on 0.0.0.0:19003
+[mem]     [memory-grpc] Server listening on 0.0.0.0:19006
+[skills]  [skills-engine] Ready. Skills installed: 0, Marketplace entries: 0
+[box]     [sandbox-grpc] Server listening on 0.0.0.0:19004
+[agent]   [agent-runtime] Service ready
+[gw]      [gateway] Dev token (for testing): dev-user.XXXXXXXXXX.YYYYYYYY
+[gw]      [gateway] Listening on http://127.0.0.1:18789
+[ui]      VITE v7.x.x  ready in 300 ms
+[ui]      ➜  Local:   http://127.0.0.1:5173/
+```
+
+**Save the dev token printed by `[gw]`** — you will use it in every API call.
+
+If you skip `secureclaw init`, the gateway falls back to an insecure dev
+default (`dev-insecure-change-me`) and prints a warning. Fine for local
+testing; run `secureclaw init` before any real use.
+
+To start the backend services without the Vite UI:
+
+```bash
+pnpm dev:services
+```
+
+---
+
+### Option B — Individual terminals (for debugging a single service)
+
+If you need to isolate one service, you can start each one manually.
+`.env` is loaded automatically — no `export` needed.
+
+**Audit system (port 19003)**
 ```bash
 node packages/audit-system/dist/index.js
 ```
 
-Expected output:
-```
-[grpc-tls] mTLS enabled for server 'audit-system'
-[audit-grpc] Server listening on 0.0.0.0:19003
-```
-
-### Tab 2 — Credential vault (port 19002)
-
+**Credential vault (port 19002)**
 ```bash
-# Development: use the default insecure master key
-VAULT_MASTER_KEY=dev-key node packages/credential-vault/dist/index.js
+node packages/credential-vault/dist/index.js
 ```
+Expected on WSL/headless Linux: `[vault] Backend: encrypted file (keytar unavailable)`
+Expected on native Windows/macOS: `[vault] Backend: OS keychain (keytar)`
 
-Expected output (WSL / headless Linux):
-```
-[vault] Backend: encrypted file (keytar unavailable — headless/WSL/CI)
-[vault-grpc] Server listening on 0.0.0.0:19002
-[vault] Service ready
-```
-
-Expected output (native Windows with keytar):
-```
-[vault] Backend: OS keychain (keytar)
-[vault-grpc] Server listening on 0.0.0.0:19002
-[vault] Service ready
-```
-
-### Tab 3 — Memory store (port 19006)
-
+**Memory store (port 19006)**
 ```bash
 node packages/memory-store/dist/index.js
 ```
 
-Expected output:
-```
-[memory-grpc] Server listening on 0.0.0.0:19006
-[memory] Service ready
-```
-
-### Tab 4 — Skills engine (port 19005)
-
+**Skills engine (port 19005)**
 ```bash
 node packages/skills-engine/dist/index.js
 ```
 
-Expected output:
-```
-[skills-engine] Starting Phase 2 skills engine
-[skills-engine] Ready. Skills installed: 0, Marketplace entries: 0
-```
-
-### Tab 5 — Agent runtime (port 19001)
-
+**Agent runtime (port 19001)**
 ```bash
 # SECURECLAW_ALLOW_RUNC=true skips the gVisor requirement in dev
-# ANTHROPIC_API_KEY is needed for real LLM responses
-SECURECLAW_ALLOW_RUNC=true \
-ANTHROPIC_API_KEY=sk-ant-... \
-node packages/agent-runtime/dist/index.js
+SECURECLAW_ALLOW_RUNC=true node packages/agent-runtime/dist/index.js
 ```
 
-Expected output:
-```
-[agent-runtime] Service ready
-```
-
-### Tab 6 — Gateway (port 18789)
-
+**Gateway (port 18789)**
 ```bash
-GATEWAY_HMAC_SECRET=dev-secret node packages/gateway/dist/index.js
+node packages/gateway/dist/index.js
 ```
 
-Expected output:
+**Control UI (port 5173)**
+```bash
+cd apps/control-ui && pnpm dev
 ```
-[gateway] Dev token (for testing): dev-user.1740000000000.abcdef1234567890
-[gateway] Listening on http://127.0.0.1:18789
-```
-
-**Save the dev token printed here** — you will use it in every API call.
-Tokens expire after **5 minutes**. Restart the gateway (or use the CLI) to
-get a fresh one.
 
 > **Security note:** The gateway binds to `127.0.0.1` only. It is never
 > accessible from the network without an explicit reverse proxy.
@@ -614,15 +622,16 @@ Approvals tab shows the tool call details. Click **Allow** to proceed or
 ## 13. CLI reference
 
 ```
-secureclaw token generate --user <id> [--secret <secret>]
-secureclaw health [--url <url>]
+secureclaw init                                          # First-run wizard: secrets + .env
+secureclaw token generate --user <id> [--secret <s>]    # Generate a bearer token
+secureclaw health [--url <url>]                          # Check gateway health
 secureclaw session create [--provider anthropic] [--token <t>]
-secureclaw session status <sessionId>        [--token <t>]
-secureclaw session delete <sessionId>        [--token <t>]
+secureclaw session status <sessionId>            [--token <t>]
+secureclaw session delete <sessionId>            [--token <t>]
 secureclaw skill list     [--search <q>] [--namespace <ns>] [--tag <t>]
 secureclaw skill publish  <manifest.json> [--trivy] [--token <t>]
-secureclaw skill install  <ns/name[@ver]>      [--token <t>]
-secureclaw skill installed                     [--token <t>]
+secureclaw skill install  <ns/name[@ver]>        [--token <t>]
+secureclaw skill installed                       [--token <t>]
 ```
 
 All commands accept `--url <base>` to target a non-default gateway address.
@@ -674,14 +683,12 @@ strongest credential security because keytar uses **Windows Credential Manager**
 
 ### Prerequisites on Windows
 
-1. Install **Node.js LTS** from https://nodejs.org (choose the Windows installer).
+1. Install **Node.js 22.13 LTS** from https://nodejs.org (choose the Windows installer).
 2. Install **pnpm**: `npm install -g pnpm`
-3. Install **Visual Studio Build Tools** (required to compile the keytar native
-   addon):
-   - Download from https://visualstudio.microsoft.com/downloads/
-   - Select workload: **"Desktop development with C++"**
-   - Or install via npm: `npm install -g --production windows-build-tools`
-4. Install **Python 3.x** (also required by node-gyp): https://python.org
+
+That's it. SecureClaw uses Node.js's **built-in** `node:sqlite` module — no
+Visual Studio Build Tools, no Python, no `node-gyp`. Everything installs from
+pure JavaScript packages.
 
 ### Build and run (PowerShell)
 
@@ -690,14 +697,16 @@ strongest credential security because keytar uses **Windows Credential Manager**
 pnpm install
 pnpm -r build
 
-# Start services — same commands as Linux but without "\" line continuation
-$env:VAULT_MASTER_KEY = "dev-key"
-node packages\credential-vault\dist\index.js
+# First-run setup (generates .env with secrets)
+node packages\cli\dist\bin.js init
+
+# Start all services
+pnpm dev
 ```
 
-You should see:
+On first start the vault will use the Windows Credential Manager:
 ```
-[vault] Backend: OS keychain (keytar)
+[vault]  [vault] Backend: OS keychain (keytar)
 ```
 
 Your credentials will appear in **Control Panel → Credential Manager →
@@ -705,28 +714,18 @@ Windows Credentials** under names starting with `SecureClaw:`.
 
 ### Environment variables in PowerShell
 
-```powershell
-$env:GATEWAY_HMAC_SECRET = "dev-secret"
-$env:ANTHROPIC_API_KEY   = "sk-ant-..."
-$env:SECURECLAW_ALLOW_RUNC = "true"
-node packages\gateway\dist\index.js
-```
+The `.env` file created by `secureclaw init` is loaded automatically by all
+services. If you need to override a value for a single run:
 
-Or create a `.env.ps1` file and dot-source it:
 ```powershell
-# .env.ps1
-$env:GATEWAY_HMAC_SECRET   = "dev-secret"
-$env:VAULT_MASTER_KEY       = "dev-key"
-$env:ANTHROPIC_API_KEY      = "sk-ant-..."
-$env:SECURECLAW_ALLOW_RUNC  = "true"
-```
-```powershell
-. .\.env.ps1
+$env:SECURECLAW_ALLOW_RUNC = "true"
+node packages\agent-runtime\dist\index.js
 ```
 
 ### Paths on Windows
 
-Replace forward slashes with backslashes in file paths. The SQLite and JSON
+Replace forward slashes with backslashes in file paths when running individual
+service commands. `pnpm dev` handles this automatically. The SQLite and JSON
 data files default to `%TEMP%\secureclaw-*` on Windows.
 
 ---
@@ -820,18 +819,16 @@ pnpm test
 
 | What | Command |
 |---|---|
+| **First-run setup** | `secureclaw init` |
+| Install dependencies | `pnpm install` |
 | Build everything | `pnpm -r build` |
-| Start audit | `node packages/audit-system/dist/index.js` |
-| Start vault | `VAULT_MASTER_KEY=dev-key node packages/credential-vault/dist/index.js` |
-| Start memory | `node packages/memory-store/dist/index.js` |
-| Start skills | `node packages/skills-engine/dist/index.js` |
-| Start agent | `SECURECLAW_ALLOW_RUNC=true ANTHROPIC_API_KEY=sk-... node packages/agent-runtime/dist/index.js` |
-| Start gateway | `GATEWAY_HMAC_SECRET=dev-secret node packages/gateway/dist/index.js` |
-| Start Control UI | `cd apps/control-ui && pnpm dev` |
-| Generate token | `node packages/cli/dist/bin.js token generate --user dev-user --secret dev-secret` |
+| **Start all services + UI** | `pnpm dev` |
+| Start backend only (no UI) | `pnpm dev:services` |
+| Generate token | `node packages/cli/dist/bin.js token generate --user dev-user` |
 | Health check | `curl http://127.0.0.1:18789/health` |
 | Chat | `curl -X POST .../api/v1/chat -H "Authorization: Bearer $TOKEN" -d '{...}'` |
 | Compliance report | `curl .../api/v1/compliance/report -H "Authorization: Bearer $TOKEN"` |
 | Cost summary | `curl .../api/v1/costs/teams -H "Authorization: Bearer $TOKEN"` |
 | Marketplace browse | `curl http://127.0.0.1:18789/api/v1/marketplace` |
+| Open Control UI | `open http://127.0.0.1:5173` |
 | Run tests | `pnpm -r test` |
