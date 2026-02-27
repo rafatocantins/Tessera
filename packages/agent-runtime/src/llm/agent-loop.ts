@@ -8,7 +8,7 @@
  * - All tool executions sandboxed in gVisor containers
  * - Every tool call and result logged to the audit system
  */
-import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
+import { trace, context, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { PolicyDeniedError, CostCapError } from "@secureclaw/shared";
 import type { SanitizerService } from "@secureclaw/input-sanitizer";
 import type { GrpcAgentChunk } from "@secureclaw/shared";
@@ -162,6 +162,27 @@ export class AgentLoop {
       process.stderr.write(`[agent-loop] Could not check cost cap for user ${ctx.user_id} — proceeding\n`);
     }
 
+    const tracer = trace.getTracer("secureclaw-agent-runtime", "0.1.0");
+
+    // Outer span covering the entire session — all child spans inherit this as parent
+    const sessionSpan = tracer.startSpan("agent.session", {
+      kind: SpanKind.INTERNAL,
+      attributes: {
+        "secureclaw.session.id": ctx.session_id,
+        "secureclaw.user.id": ctx.user_id,
+        "gen_ai.system": ctx.provider.provider_name,
+        "gen_ai.request.model": ctx.provider.model_name,
+      },
+    });
+    const otelCtx = trace.setSpan(context.active(), sessionSpan);
+
+    // LLM loop: may iterate multiple turns if tools are called
+    let continueLoop = true;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let toolCallsExecuted = 0;
+
+    try {
     // ── Memory: load prior conversation history on first turn ─────────────────
     if (this.memoryClient && ctx.messages.length === 0) {
       // Register session (fire-and-forget — must happen before appendMessage calls)
@@ -209,13 +230,6 @@ export class AgentLoop {
       payload: { content_length: content.length },
       severity: "INFO",
     });
-
-    // LLM loop: may iterate multiple turns if tools are called
-    let continueLoop = true;
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
-    let toolCallsExecuted = 0;
-    const tracer = trace.getTracer("secureclaw-agent-runtime", "0.1.0");
 
     while (continueLoop) {
       // Load skill tools once per turn (skills can be installed between turns)
@@ -285,7 +299,7 @@ export class AgentLoop {
       const toolCallsThisTurn: Array<{ call_id: string; tool_id: string; input: Record<string, unknown> }> = [];
       const toolResultsBuffer: Array<{ call_id: string; tool_id: string; result: string }> = [];
 
-      const genAiSpan = tracer.startSpan("gen_ai.chat", { kind: SpanKind.INTERNAL });
+      const genAiSpan = tracer.startSpan("gen_ai.chat", { kind: SpanKind.INTERNAL }, otelCtx);
       genAiSpan.setAttributes({
         "gen_ai.system": ctx.provider.provider_name,
         "gen_ai.request.model": ctx.provider.model_name,
@@ -356,7 +370,8 @@ export class AgentLoop {
               severity: "INFO",
             });
 
-            const approvalSpan = tracer.startSpan("secureclaw.approval.wait", { kind: SpanKind.INTERNAL });
+            const approvalStart = Date.now();
+            const approvalSpan = tracer.startSpan("secureclaw.approval.wait", { kind: SpanKind.INTERNAL }, otelCtx);
             approvalSpan.setAttributes({ "secureclaw.tool.id": tool_id, "secureclaw.call.id": call_id });
             let approved: boolean;
             try {
@@ -366,6 +381,14 @@ export class AgentLoop {
                 session_id: ctx.session_id,
                 input_preview: inputPreview,
               });
+              approvalSpan.setAttributes({
+                "secureclaw.approval.decision": approved ? "granted" : "denied",
+                "secureclaw.approval.duration_ms": Date.now() - approvalStart,
+              });
+            } catch (err) {
+              approvalSpan.recordException(err instanceof Error ? err : new Error(String(err)));
+              approvalSpan.setStatus({ code: SpanStatusCode.ERROR });
+              throw err;
             } finally {
               approvalSpan.end();
             }
@@ -431,7 +454,7 @@ export class AgentLoop {
           const startMs = Date.now();
           let toolResult: string;
           let toolSuccess = false;
-          const toolSpan = tracer.startSpan("secureclaw.tool.run", { kind: SpanKind.INTERNAL });
+          const toolSpan = tracer.startSpan("secureclaw.tool.run", { kind: SpanKind.INTERNAL }, otelCtx);
           toolSpan.setAttributes({
             "secureclaw.tool.id": tool_id,
             "secureclaw.tool.image": skillRoute
@@ -670,5 +693,12 @@ export class AgentLoop {
         tool_calls_executed: toolCallsExecuted,
       },
     };
+    } catch (err) {
+      sessionSpan.recordException(err instanceof Error ? err : new Error(String(err)));
+      sessionSpan.setStatus({ code: SpanStatusCode.ERROR });
+      throw err;
+    } finally {
+      sessionSpan.end();
+    }
   }
 }

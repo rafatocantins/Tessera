@@ -38,7 +38,7 @@ etc.) cut corners.
 | EU AI Act compliance dashboard (Art. 9, 12, 14, 15) | ✅ complete |
 | Cost showback / chargeback (team_id, CSV export) | ✅ complete |
 | OpenTelemetry SDK wiring (`telemetry.ts`, Jaeger compose) | ✅ complete |
-| **OTel spans in agent-loop** (LLM calls, tool exec, approval wait) | ❌ missing |
+| **OTel spans in agent-loop** (LLM calls, tool exec, approval wait) | ✅ complete |
 | Skills marketplace (publish, list, install, download count) | ✅ complete |
 | CLI `skill` commands (publish, list, install, installed) | ✅ complete |
 | Control UI: Compliance, Costs, Marketplace tabs | ✅ complete |
@@ -189,28 +189,7 @@ Before any Phase 2 work starts, the following must all be true:
 
 ## Remaining Phase 1 work
 
-### OTel span instrumentation in agent-loop
-
-The tracer is obtained (`trace.getTracer(...)`) but `startActiveSpan` is never
-called. The following spans must be added to
-`packages/agent-runtime/src/llm/agent-loop.ts`:
-
-```
-agent.session              — outer span wrapping the whole run() call
-  gen_ai.chat              — one span per streamCompletion() call
-    gen_ai.usage.*         — attributes: input_tokens, output_tokens, model, system
-  secureclaw.tool.run      — one span per tool execution (sandbox + skills paths)
-    secureclaw.tool.*      — attributes: tool_id, image, exit_code, duration_ms, timed_out
-  secureclaw.approval.wait — one span per approvalGate.waitForApproval() call
-    secureclaw.approval.*  — attributes: decision (granted/denied/timeout), duration_ms
-```
-
-Rules:
-- Every span uses `try/finally` to guarantee `span.end()` even on error
-- Errors: `span.recordException(err)` + `span.setStatus({ code: SpanStatusCode.ERROR })`
-- Kind: `SpanKind.INTERNAL` for all
-
-Estimated effort: 1 session (~4 h).
+All Phase 1 items complete. ✅
 
 ---
 
