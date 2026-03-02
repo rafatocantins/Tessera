@@ -181,6 +181,18 @@ export class AgentLoop {
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let toolCallsExecuted = 0;
+    let turnCount = 0;
+
+    // Configurable turn cap — prevents runaway agents from burning API budget.
+    // Each "turn" is one round-trip to the LLM (streaming response).
+    const maxTurns = (() => {
+      const val = process.env["AGENT_MAX_TURNS_PER_SESSION"];
+      if (val) {
+        const n = parseInt(val, 10);
+        if (!isNaN(n) && n >= 1 && n <= 500) return n;
+      }
+      return 20; // default
+    })();
 
     try {
     // ── Memory: load prior conversation history on first turn ─────────────────
@@ -232,6 +244,25 @@ export class AgentLoop {
     });
 
     while (continueLoop) {
+      // Turn cap — prevent runaway loops from burning API budget
+      turnCount++;
+      if (turnCount > maxTurns) {
+        this.auditClient.logEvent({
+          event_type: "POLICY_DENIED",
+          session_id: ctx.session_id,
+          user_id: ctx.user_id,
+          payload: { reason: "agent_turn_cap_exceeded", max_turns: maxTurns },
+          severity: "WARN",
+        });
+        yield {
+          error: {
+            code: "TURN_CAP_EXCEEDED",
+            message: `Agent stopped: maximum ${maxTurns} turns per session reached (set AGENT_MAX_TURNS_PER_SESSION to adjust)`,
+          },
+        };
+        break;
+      }
+
       // Load skill tools once per turn (skills can be installed between turns)
       const skillRoutes = new Map<string, SkillToolRoute>();
       const skillToolDefs: LLMTool[] = [];
@@ -435,10 +466,12 @@ export class AgentLoop {
             // No credentials to inject — use input as-is
           }
 
-          // URL safety check for http_request tools (SSRF prevention)
+          // URL safety check for http_request tools (SSRF + DNS rebinding prevention)
           if (tool_id === "http_request") {
             const parsedInput = JSON.parse(toolInputJson) as { url?: string };
-            const urlCheck = this.sanitizer.checkUrlSafety(parsedInput.url ?? "");
+            // checkUrlSafetyResolved: sync string checks + DNS resolution to catch
+            // rebinding attacks where hostname re-maps to a private IP at fetch time
+            const urlCheck = await this.sanitizer.checkUrlSafetyResolved(parsedInput.url ?? "");
             if (!urlCheck.safe) {
               this.auditClient.logEvent({
                 event_type: "POLICY_DENIED",

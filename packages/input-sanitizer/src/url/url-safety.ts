@@ -1,7 +1,7 @@
 /**
  * url-safety.ts — SSRF prevention for outbound HTTP requests.
  *
- * Checks (in order):
+ * Sync checks (checkUrlSafety — in order):
  * 1. Invalid URL — parse failure
  * 2. TLS enforcement — http: scheme blocked unless TESSERA_REQUIRE_TLS=false
  * 3. Metadata endpoints — cloud IMDS hostnames
@@ -9,7 +9,13 @@
  * 5. Localhost names — localhost, *.local, *.internal
  * 6. HTTP_BLOCKED_DOMAINS — operator-specified blocklist
  * 7. HTTP_ALLOWED_DOMAINS — operator-specified allowlist (opt-in, empty = all pass)
+ *
+ * Async check (checkUrlSafetyResolved — DNS rebinding defence):
+ * 8. Resolve hostname → validate all returned IPs against private ranges.
+ *    Prevents attacks where a public hostname temporarily re-maps to a
+ *    private IP between the sync hostname check and the actual fetch.
  */
+import { lookup } from "node:dns/promises";
 
 export type UrlSafetyCategory =
   | "invalid_url"
@@ -132,6 +138,73 @@ export function checkUrlSafety(rawUrl: string): UrlSafetyResult {
         safe: false,
         reason: `Domain '${hostname}' is not in the HTTP_ALLOWED_DOMAINS allowlist`,
         category: "not_in_allowlist",
+      };
+    }
+  }
+
+  return { safe: true };
+}
+
+/**
+ * Async variant — runs all sync checks first, then resolves the hostname via
+ * DNS and validates every returned IP against the private/loopback ranges.
+ *
+ * Use this in the agent loop (before dispatching a tool call) to defend
+ * against DNS rebinding: an attacker-controlled hostname may pass the sync
+ * string checks but re-resolve to a private IP when the container fetches it.
+ *
+ * Timeout: 5 seconds. On resolution failure (NXDOMAIN, timeout, network error)
+ * the check returns safe=false with category "private_ip" — fail-closed.
+ */
+export async function checkUrlSafetyResolved(rawUrl: string): Promise<UrlSafetyResult> {
+  // 1–7: Run all sync checks first
+  const syncResult = checkUrlSafety(rawUrl);
+  if (!syncResult.safe) return syncResult;
+
+  // Parse again (already validated above)
+  const parsed = new URL(rawUrl);
+  const hostname = stripBrackets(parsed.hostname.toLowerCase());
+
+  // Skip DNS resolution for bare IP literals — already checked by sync pass
+  const isIpLiteral =
+    /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) || // IPv4
+    /^[0-9a-f:]+$/i.test(hostname);               // IPv6 (no brackets)
+  if (isIpLiteral) return { safe: true };
+
+  // 8. Resolve hostname → check all returned IPs
+  let addresses: string[];
+  try {
+    const results = await Promise.race([
+      lookup(hostname, { all: true }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("DNS timeout")), 5_000)
+      ),
+    ]);
+    addresses = (results as { address: string }[]).map((r) => r.address);
+  } catch {
+    // DNS resolution failed — fail closed (could be NXDOMAIN or a timeout)
+    return {
+      safe: false,
+      reason: `DNS resolution failed for '${hostname}' — request blocked (SSRF prevention)`,
+      category: "private_ip",
+    };
+  }
+
+  for (const addr of addresses) {
+    const normalized = addr.toLowerCase();
+    // Cloud metadata IPs — check before generic private ranges
+    if (METADATA_HOSTNAMES.has(normalized)) {
+      return {
+        safe: false,
+        reason: `'${hostname}' resolved to cloud metadata IP '${addr}' — DNS rebinding attack blocked`,
+        category: "metadata_endpoint",
+      };
+    }
+    if (PRIVATE_IPV4_RE.test(normalized) || PRIVATE_IPV6_RE.test(normalized)) {
+      return {
+        safe: false,
+        reason: `'${hostname}' resolved to private/loopback IP '${addr}' — DNS rebinding attack blocked`,
+        category: "private_ip",
       };
     }
   }

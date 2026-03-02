@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { checkUrlSafety } from "./url-safety.js";
+import { describe, it, expect, beforeEach, afterEach, vi, type MockedFunction } from "vitest";
+import { checkUrlSafety, checkUrlSafetyResolved } from "./url-safety.js";
+import { lookup as dnsLookup } from "node:dns/promises";
+
+// Hoist — Vitest replaces node:dns/promises with the mock factory
+vi.mock("node:dns/promises", () => ({
+  lookup: vi.fn(),
+}));
+
+const mockedLookup = dnsLookup as MockedFunction<typeof dnsLookup>;
 
 // Helper to temporarily set / unset env vars within a test
 function withEnv(vars: Record<string, string | undefined>, fn: () => void): void {
@@ -296,5 +304,85 @@ describe("checkUrlSafety — invalid URLs", () => {
     const r = checkUrlSafety("not a url at all!!");
     expect(r.safe).toBe(false);
     expect(r.category).toBe("invalid_url");
+  });
+});
+
+// ── checkUrlSafetyResolved (DNS rebinding defence) ───────────────────────────
+
+describe("checkUrlSafetyResolved", () => {
+  beforeEach(() => {
+    delete process.env["TESSERA_REQUIRE_TLS"];
+    delete process.env["HTTP_ALLOWED_DOMAINS"];
+    delete process.env["HTTP_BLOCKED_DOMAINS"];
+    mockedLookup.mockReset();
+  });
+
+  it("passes a public hostname that resolves to a public IP", async () => {
+    mockedLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }] as never);
+    const r = await checkUrlSafetyResolved("https://example.com/page");
+    expect(r.safe).toBe(true);
+  });
+
+  it("blocks a hostname that resolves to a private IP (DNS rebinding)", async () => {
+    mockedLookup.mockResolvedValue([{ address: "192.168.1.100", family: 4 }] as never);
+    const r = await checkUrlSafetyResolved("https://evil.example.com/steal");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("private_ip");
+    expect(r.reason).toContain("DNS rebinding");
+  });
+
+  it("blocks when DNS returns multiple IPs and one is private", async () => {
+    mockedLookup.mockResolvedValue([
+      { address: "93.184.216.34", family: 4 },
+      { address: "10.0.0.5", family: 4 },
+    ] as never);
+    const r = await checkUrlSafetyResolved("https://dual-stack.example.com/");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("private_ip");
+  });
+
+  it("blocks a hostname that resolves to the AWS IMDS IP (DNS rebinding)", async () => {
+    mockedLookup.mockResolvedValue([{ address: "169.254.169.254", family: 4 }] as never);
+    const r = await checkUrlSafetyResolved("https://looks-safe.example.com/");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("metadata_endpoint");
+    expect(r.reason).toContain("DNS rebinding");
+  });
+
+  it("blocks a hostname resolving to loopback ::1", async () => {
+    mockedLookup.mockResolvedValue([{ address: "::1", family: 6 }] as never);
+    const r = await checkUrlSafetyResolved("https://local.example.com/");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("private_ip");
+  });
+
+  it("blocks when DNS resolution fails (fail-closed)", async () => {
+    mockedLookup.mockRejectedValue(new Error("ENOTFOUND"));
+    const r = await checkUrlSafetyResolved("https://unresolvable.example.com/");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("private_ip");
+    expect(r.reason).toContain("DNS resolution failed");
+  });
+
+  it("applies sync checks first — blocks plain http before DNS", async () => {
+    // DNS should never be called for plain http (sync check catches it first)
+    const r = await checkUrlSafetyResolved("http://example.com/");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("plain_http");
+    expect(mockedLookup).not.toHaveBeenCalled();
+  });
+
+  it("skips DNS for bare public IPv4 literal", async () => {
+    // Bare IPs are already validated by sync pass; no DNS needed
+    const r = await checkUrlSafetyResolved("https://8.8.8.8/");
+    expect(r.safe).toBe(true);
+    expect(mockedLookup).not.toHaveBeenCalled();
+  });
+
+  it("blocks bare private IPv4 literal without DNS lookup", async () => {
+    const r = await checkUrlSafetyResolved("https://10.0.0.1/");
+    expect(r.safe).toBe(false);
+    expect(r.category).toBe("private_ip");
+    expect(mockedLookup).not.toHaveBeenCalled();
   });
 });

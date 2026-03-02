@@ -33,7 +33,7 @@ import {
   checkOutputGuardrails,
   type GuardrailResult,
 } from "./output/output-guardrail.js";
-import { checkUrlSafety, type UrlSafetyResult } from "./url/url-safety.js";
+import { checkUrlSafety, checkUrlSafetyResolved, type UrlSafetyResult } from "./url/url-safety.js";
 
 export interface SanitizeUserInputResult {
   safe_content: string;
@@ -210,9 +210,20 @@ export class SanitizerService {
   /**
    * Check whether a URL is safe to request (SSRF prevention).
    * Validates scheme, private IP ranges, metadata endpoints, and domain lists.
+   * Pure sync — does not resolve DNS.
    */
   checkUrlSafety(url: string): UrlSafetyResult {
     return checkUrlSafety(url);
+  }
+
+  /**
+   * Async SSRF check that also resolves DNS and validates all returned IPs.
+   * Defends against DNS rebinding: a hostname that passes the sync string
+   * check may still resolve to a private IP at fetch time.
+   * Fail-closed: DNS resolution failures are treated as blocked.
+   */
+  async checkUrlSafetyResolved(url: string): Promise<UrlSafetyResult> {
+    return checkUrlSafetyResolved(url);
   }
 
   /**

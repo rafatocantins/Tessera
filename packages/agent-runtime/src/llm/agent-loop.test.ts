@@ -79,6 +79,7 @@ function makeSanitizer(): SanitizerService {
         is_suspicious: false,
       }),
     checkUrlSafety: () => ({ safe: true }),
+    checkUrlSafetyResolved: () => Promise.resolve({ safe: true }),
     initSession: () => ({ session_id: "sess-test", open_tag: "<SC>", close_tag: "</SC>" }),
     destroySession: () => undefined,
   } as unknown as SanitizerService;
