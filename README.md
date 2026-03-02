@@ -1,3 +1,5 @@
+<img width="1536" height="1024" alt="Tessera Logotipo original" src="https://github.com/user-attachments/assets/4e3250e3-9f21-4fa9-9b48-10622d2b2bc5" />
+
 # Tessera
 
 **Your secure personal AI agent. Defense in depth. Zero trust by default.**
