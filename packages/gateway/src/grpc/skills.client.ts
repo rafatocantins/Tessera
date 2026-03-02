@@ -2,6 +2,7 @@
  * skills.client.ts — Lightweight gRPC client for the SkillsService (gateway side).
  *
  * Provides marketplace operations: publish, list, get, install.
+ * Also provides direct install (without marketplace) and listing of installed skills.
  */
 import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
@@ -12,7 +13,10 @@ import type {
   GrpcGetMarketplaceSkillRequest,
   GrpcGetMarketplaceSkillResponse,
   GrpcInstallFromMarketplaceRequest,
+  GrpcInstallSkillRequest,
   GrpcInstallSkillResponse,
+  GrpcListSkillsRequest,
+  GrpcListSkillsResponse,
 } from "@tessera/shared";
 
 export class SkillsGrpcClient {
@@ -79,6 +83,37 @@ export class SkillsGrpcClient {
       this.client.InstallFromMarketplace(
         req,
         (err: grpc.ServiceError | null, res: GrpcInstallSkillResponse) => {
+          if (err) { reject(err); return; }
+          resolve(res);
+        }
+      );
+    });
+  }
+
+  /** Install a signed manifest directly (bypasses marketplace). */
+  installSkill(manifestJson: string, force = false): Promise<GrpcInstallSkillResponse> {
+    return new Promise((resolve, reject) => {
+      const req: GrpcInstallSkillRequest = { manifest_json: manifestJson, force };
+      this.client.InstallSkill(
+        req,
+        (err: grpc.ServiceError | null, res: GrpcInstallSkillResponse) => {
+          if (err) { reject(err); return; }
+          resolve(res);
+        }
+      );
+    });
+  }
+
+  /** List all locally installed skills. */
+  listInstalledSkills(namespace?: string, tag?: string): Promise<GrpcListSkillsResponse> {
+    return new Promise((resolve, reject) => {
+      const req: GrpcListSkillsRequest = {
+        namespace_filter: namespace ?? "",
+        tag_filter: tag ?? "",
+      };
+      this.client.ListSkills(
+        req,
+        (err: grpc.ServiceError | null, res: GrpcListSkillsResponse) => {
           if (err) { reject(err); return; }
           resolve(res);
         }

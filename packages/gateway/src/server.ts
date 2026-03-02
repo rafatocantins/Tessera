@@ -23,6 +23,7 @@ import { credentialsRoute } from "./routes/credentials.route.js";
 import { complianceRoute } from "./routes/compliance.route.js";
 import { costsRoute } from "./routes/costs.route.js";
 import { marketplaceRoute } from "./routes/marketplace.route.js";
+import { skillsRoute } from "./routes/skills.route.js";
 import { tokenRoute } from "./routes/token.route.js";
 import type { AgentGrpcClient } from "./grpc/agent.client.js";
 import { AuditGrpcClient } from "./grpc/audit.client.js";
@@ -111,6 +112,7 @@ export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcC
   const skillsClient = new SkillsGrpcClient();
   app.decorate("skillsClient", skillsClient);
   await app.register(marketplaceRoute, { prefix: "/api/v1/marketplace", skillsClient });
+  await app.register(skillsRoute, { prefix: "/api/v1/skills", skillsClient });
 
   return app;
 }

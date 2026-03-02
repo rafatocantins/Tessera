@@ -1,0 +1,54 @@
+{
+  "id": "tessera/read-url",
+  "name": "Read URL",
+  "version": "1.0.0",
+  "description": "Fetch the content of a URL and return it as text. Only HTTPS is allowed; private IPs and cloud metadata endpoints are blocked by both the SSRF layer and the tool itself.",
+  "author": {
+    "name": "Tessera Project"
+  },
+  "published_at": "2026-03-02T00:00:00Z",
+  "public_key": "REPLACE_WITH_HEX_SPKI_PUBLIC_KEY",
+  "signature": "",
+  "tools": [
+    {
+      "tool_id": "read_url",
+      "description": "Fetch a URL and return its text content (HTML, JSON, plain text). Only HTTPS URLs are accepted. Private/internal IPs and cloud metadata endpoints are blocked. Output is capped at 50 KB.",
+      "image": {
+        "repository": "ghcr.io/tessera/read-url",
+        "tag": "1.0.0",
+        "digest": "sha256:REPLACE_WITH_ACTUAL_IMAGE_DIGEST"
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The HTTPS URL to fetch. Must start with https://. Private IPs and metadata endpoints are blocked.",
+            "pattern": "^https://"
+          }
+        },
+        "required": ["url"],
+        "additionalProperties": false
+      },
+      "requires_approval": false,
+      "resource_limits": {
+        "memory_bytes": 134217728,
+        "pids_limit": 16,
+        "timeout_seconds": 30,
+        "network": "full",
+        "read_only_fs": true,
+        "allowed_paths": []
+      }
+    }
+  ],
+  "permissions": {
+    "network_access": true,
+    "allowed_domains": [],
+    "filesystem_read": [],
+    "filesystem_write": [],
+    "credential_refs": []
+  },
+  "tags": ["web", "http", "fetch", "read"],
+  "license": "MIT",
+  "min_tessera_version": "0.1.0"
+}

@@ -9,7 +9,7 @@
  *   tessera session status  <sessionId>            [--token <t>] [--url <url>]
  *   tessera session delete  <sessionId>            [--token <t>] [--url <url>]
  *   tessera health                                              [--url <url>]
- *   tessera skill publish|list|install|installed
+ *   tessera skill keygen|sign|install-local|publish|list|install|installed
  *
  * Environment variables (can be set in .env — run `tessera init`):
  *   GATEWAY_HMAC_SECRET  — HMAC secret for token generation

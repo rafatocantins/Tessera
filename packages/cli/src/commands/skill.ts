@@ -1,14 +1,25 @@
 /**
- * skill.ts — `tessera skill` subcommands for the marketplace.
+ * skill.ts — `tessera skill` subcommands for skills management.
  *
- * publish   — Publish a signed skill manifest to the marketplace
- * list      — Browse marketplace skills
- * install   — Install a skill from the marketplace
- * installed — List locally installed skills
+ * keygen        — Generate an Ed25519 key pair for signing skill manifests
+ * sign          — Sign a skill manifest template and output signed manifest
+ * install-local — Install a signed manifest directly (bypasses marketplace)
+ * publish       — Publish a signed skill manifest to the marketplace
+ * list          — Browse marketplace skills
+ * install       — Install a skill from the marketplace
+ * installed     — List locally installed skills
  */
 import { Command } from "commander";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
+import path from "node:path";
+import {
+  generateEd25519KeyPair,
+  signEd25519,
+  SkillManifestSchema,
+  canonicalSkillPayload,
+} from "@tessera/shared";
 import { apiGet, apiPost, printApiError } from "../http.js";
 
 const DEFAULT_URL = "http://127.0.0.1:18789";
@@ -37,6 +48,122 @@ function resolveToken(opts: { token?: string }): string {
 
 export function skillCommand(): Command {
   const cmd = new Command("skill").description("Manage skills and marketplace");
+
+  // ── skill keygen ───────────────────────────────────────────────────────
+  cmd
+    .command("keygen")
+    .description("Generate an Ed25519 key pair for signing skill manifests")
+    .option("--name <name>", "File name prefix for the key pair", "tessera-skill")
+    .option("--output-dir <dir>", "Directory to write key files", ".")
+    .action((opts: { name: string; outputDir: string }) => {
+      const { publicKey, privateKey } = generateEd25519KeyPair();
+
+      const dir = path.resolve(opts.outputDir);
+      try {
+        mkdirSync(dir, { recursive: true });
+      } catch { /* ignore if exists */ }
+
+      const privPath = path.join(dir, `${opts.name}.private.key`);
+      const pubPath  = path.join(dir, `${opts.name}.public.key`);
+
+      writeFileSync(privPath, privateKey, { mode: 0o600 });
+      writeFileSync(pubPath,  publicKey);
+
+      process.stdout.write(`Generated Ed25519 key pair:\n`);
+      process.stdout.write(`  Private key: ${privPath}  (keep secret!)\n`);
+      process.stdout.write(`  Public key:  ${pubPath}\n\n`);
+      process.stdout.write(`Copy the public key into your manifest.template.json "public_key" field:\n`);
+      process.stdout.write(`  ${publicKey}\n`);
+    });
+
+  // ── skill sign ─────────────────────────────────────────────────────────
+  cmd
+    .command("sign <manifestTemplate>")
+    .description("Sign a skill manifest template and output the signed manifest JSON")
+    .requiredOption("--private-key <path>", "Path to the Ed25519 private key file (.private.key)")
+    .option("--output <path>", "Write signed manifest to this file (default: stdout)")
+    .action((manifestTemplate: string, opts: { privateKey: string; output?: string }) => {
+      let templateJson: string;
+      try {
+        templateJson = readFileSync(manifestTemplate, "utf-8").trim();
+      } catch {
+        process.stderr.write(`error: could not read manifest template: ${manifestTemplate}\n`);
+        process.exit(1);
+      }
+
+      let privateKeyHex: string;
+      try {
+        privateKeyHex = readFileSync(opts.privateKey, "utf-8").trim();
+      } catch {
+        process.stderr.write(`error: could not read private key: ${opts.privateKey}\n`);
+        process.exit(1);
+      }
+
+      let manifest: ReturnType<typeof SkillManifestSchema.parse>;
+      try {
+        manifest = SkillManifestSchema.parse(JSON.parse(templateJson));
+      } catch (err) {
+        process.stderr.write(`error: manifest template is invalid: ${String(err)}\n`);
+        process.exit(1);
+      }
+
+      const canonical = canonicalSkillPayload(manifest);
+      let signature: string;
+      try {
+        signature = signEd25519(privateKeyHex, canonical);
+      } catch (err) {
+        process.stderr.write(`error: signing failed (bad private key?): ${String(err)}\n`);
+        process.exit(1);
+      }
+
+      const signed = JSON.stringify({ ...manifest, signature }, null, 2);
+
+      if (opts.output) {
+        writeFileSync(opts.output, signed);
+        process.stdout.write(`Signed manifest written to: ${opts.output}\n`);
+      } else {
+        process.stdout.write(signed + "\n");
+      }
+    });
+
+  // ── skill install-local ────────────────────────────────────────────────
+  addCommonOpts(
+    cmd
+      .command("install-local <manifestPath>")
+      .description("Install a signed skill manifest directly (bypasses marketplace)")
+      .option("--force", "Reinstall even if the same version is already installed")
+  ).action(async (manifestPath: string, opts: { token?: string; url: string; force?: boolean }) => {
+    const token = resolveToken(opts);
+
+    let manifestJson: string;
+    try {
+      manifestJson = readFileSync(manifestPath, "utf-8").trim();
+    } catch {
+      process.stderr.write(`error: could not read manifest file: ${manifestPath}\n`);
+      process.exit(1);
+    }
+
+    try {
+      const { body } = await apiPost(
+        `${opts.url}/api/v1/skills`,
+        token,
+        { manifest_json: manifestJson, force: Boolean(opts.force) }
+      );
+      const result = body as {
+        success: boolean;
+        skill_id: string;
+        skill_version: string;
+        tools_registered: number;
+        message: string;
+      };
+      process.stdout.write(`installed: ${result.skill_id}@${result.skill_version}\n`);
+      process.stdout.write(`tools:     ${result.tools_registered} registered\n`);
+      process.stdout.write(`message:   ${result.message}\n`);
+    } catch (err) {
+      printApiError(err);
+      process.exit(1);
+    }
+  });
 
   // ── skill publish ──────────────────────────────────────────────────────
   addCommonOpts(
