@@ -17,12 +17,13 @@ import { CredentialVault } from "./components/CredentialVault.js";
 import { ComplianceDashboard } from "./components/ComplianceDashboard.js";
 import { CostDashboard } from "./components/CostDashboard.js";
 import { Marketplace } from "./components/Marketplace.js";
+import { Chat } from "./components/Chat.js";
 
-type Tab = "approvals" | "sessions" | "audit" | "credentials" | "compliance" | "costs" | "marketplace";
+type Tab = "chat" | "approvals" | "sessions" | "audit" | "credentials" | "compliance" | "costs" | "marketplace";
 
 export function App() {
   const [secret, setSecret] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("approvals");
+  const [tab, setTab] = useState<Tab>("chat");
   const [pendingCount, setPendingCount] = useState(0);
   const [sessionStatus, setSessionStatus] = useState<"active" | "checking" | "expired">("active");
   const [expirySeconds, setExpirySeconds] = useState(300);
@@ -92,6 +93,9 @@ export function App() {
         </div>
 
         <nav style={s.nav}>
+          <TabBtn active={tab === "chat"} onClick={() => setTab("chat")}>
+            Chat
+          </TabBtn>
           <TabBtn
             active={tab === "approvals"}
             onClick={() => setTab("approvals")}
@@ -136,6 +140,7 @@ export function App() {
 
       {/* Content */}
       <main style={s.main}>
+        {tab === "chat" && <Chat secret={secret} />}
         {tab === "approvals" && (
           <ApprovalQueue
             secret={secret}

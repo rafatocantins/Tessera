@@ -52,12 +52,22 @@ export function generateGatewayToken(userId: string, secret: string): string {
 /**
  * Fastify pre-handler hook that validates HMAC tokens.
  * Attached to all authenticated routes.
+ *
+ * WebSocket exception: browsers cannot set custom HTTP headers during a WS
+ * upgrade. For WebSocket connections we fall back to the `?token=` query
+ * param (the global blockTokenInQueryParams hook exempts WS upgrades).
  */
 export async function verifyToken(
   req: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const authHeader = req.headers["authorization"];
+  let authHeader = req.headers["authorization"];
+
+  // Browser WebSocket fallback — accept token in query param only during upgrade
+  if (!authHeader && req.headers["upgrade"] === "websocket") {
+    const q = req.query as Record<string, string>;
+    if (q["token"]) authHeader = `Bearer ${q["token"]}`;
+  }
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     await reply.code(401).send({
@@ -106,11 +116,18 @@ export async function verifyToken(
 /**
  * Hook that blocks any request with Authorization data in query parameters.
  * Tokens in URLs appear in server logs, browser history, and proxies.
+ *
+ * WebSocket exception: browsers cannot send custom headers during a WS
+ * upgrade, so the `?token=` query param is the only viable auth channel.
+ * We exempt WS upgrades here; verifyToken handles the actual validation.
  */
 export async function blockTokenInQueryParams(
   req: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
+  // Allow token in query params for WebSocket upgrade requests (browser limitation)
+  if (req.headers["upgrade"] === "websocket") return;
+
   const query = req.query as Record<string, string>;
   const suspiciousKeys = ["token", "access_token", "auth", "api_key", "key", "authorization"];
 
