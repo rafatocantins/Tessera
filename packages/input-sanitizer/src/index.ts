@@ -15,6 +15,8 @@ export {
 } from "./content-type/content-tagger.js";
 export { classifyExternalContent } from "./llm/llm-classifier.js";
 export { checkOutputGuardrails, DESTRUCTIVE_TOOL_IDS } from "./output/output-guardrail.js";
+export { checkUrlSafety } from "./url/url-safety.js";
+export type { UrlSafetyResult, UrlSafetyCategory } from "./url/url-safety.js";
 export type { SanitizerConfig, SanitizeUserInputResult, SanitizeExternalContentResult } from "./sanitizer.js";
 export type { InjectionScanResult, InjectionMatch } from "./heuristic/injection.detector.js";
 export type { PiiDetectionResult } from "./heuristic/pii.detector.js";

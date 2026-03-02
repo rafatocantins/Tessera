@@ -72,6 +72,13 @@ function makeSanitizer(): SanitizerService {
       injection_scan: { highest_severity: "none", is_suspicious: false, matches: [] },
       pii_redacted: false,
     }),
+    sanitizeExternalContent: (_content: string, _sessionId: string, _source: string) =>
+      Promise.resolve({
+        wrapped_content: _content,
+        injection_scan: { is_suspicious: false, highest_severity: null, matches: [] },
+        is_suspicious: false,
+      }),
+    checkUrlSafety: () => ({ safe: true }),
     initSession: () => ({ session_id: "sess-test", open_tag: "<SC>", close_tag: "</SC>" }),
     destroySession: () => undefined,
   } as unknown as SanitizerService;

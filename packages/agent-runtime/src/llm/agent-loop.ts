@@ -435,6 +435,27 @@ export class AgentLoop {
             // No credentials to inject — use input as-is
           }
 
+          // URL safety check for http_request tools (SSRF prevention)
+          if (tool_id === "http_request") {
+            const parsedInput = JSON.parse(toolInputJson) as { url?: string };
+            const urlCheck = this.sanitizer.checkUrlSafety(parsedInput.url ?? "");
+            if (!urlCheck.safe) {
+              this.auditClient.logEvent({
+                event_type: "POLICY_DENIED",
+                session_id: ctx.session_id,
+                user_id: ctx.user_id,
+                payload: { call_id, tool_id, reason: urlCheck.reason, category: urlCheck.category },
+                severity: "WARN",
+              });
+              yield { error: { code: "POLICY_DENIED", message: `URL blocked: ${urlCheck.reason}` } };
+              toolResultsBuffer.push({
+                call_id, tool_id,
+                result: `[URL BLOCKED: ${urlCheck.reason ?? urlCheck.category}]`,
+              });
+              continue;
+            }
+          }
+
           const skillRoute = skillRoutes.get(tool_id);
           const image = TOOL_IMAGES[tool_id] ?? `tessera/${tool_id}:latest`;
 
@@ -590,7 +611,34 @@ export class AgentLoop {
             toolSpan.end();
           }
 
-          toolResultsBuffer.push({ call_id, tool_id, result: toolResult });
+          // Scan tool output for prompt injection before handing it to the LLM
+          const outputScan = await this.sanitizer.sanitizeExternalContent(
+            toolResult, ctx.session_id, `tool:${tool_id}`
+          );
+          if (
+            outputScan.injection_scan.is_suspicious &&
+            outputScan.injection_scan.highest_severity === "critical"
+          ) {
+            this.auditClient.logEvent({
+              event_type: "INJECTION_DETECTED",
+              session_id: ctx.session_id,
+              user_id: ctx.user_id,
+              payload: {
+                call_id,
+                tool_id,
+                pattern: outputScan.injection_scan.matches[0]?.pattern_id,
+                source: `tool:${tool_id}`,
+              },
+              severity: "CRITICAL",
+            });
+            toolResultsBuffer.push({
+              call_id, tool_id,
+              result: "[TOOL OUTPUT SUPPRESSED: Prompt injection attempt detected]",
+            });
+          } else {
+            // Use session-delimited wrapped content (mitigates indirect injection)
+            toolResultsBuffer.push({ call_id, tool_id, result: outputScan.wrapped_content });
+          }
           toolCallsExecuted++;
         } else if (chunk.type === "finish") {
           totalInputTokens += chunk.usage.input_tokens;

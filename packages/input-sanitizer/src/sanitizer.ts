@@ -33,6 +33,7 @@ import {
   checkOutputGuardrails,
   type GuardrailResult,
 } from "./output/output-guardrail.js";
+import { checkUrlSafety, type UrlSafetyResult } from "./url/url-safety.js";
 
 export interface SanitizeUserInputResult {
   safe_content: string;
@@ -204,6 +205,14 @@ export class SanitizerService {
    */
   detectPii(content: string): PiiDetectionResult {
     return detectAndRedactPii(content);
+  }
+
+  /**
+   * Check whether a URL is safe to request (SSRF prevention).
+   * Validates scheme, private IP ranges, metadata endpoints, and domain lists.
+   */
+  checkUrlSafety(url: string): UrlSafetyResult {
+    return checkUrlSafety(url);
   }
 
   /**
