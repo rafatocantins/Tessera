@@ -8,7 +8,8 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/agent-runtime/package.json packages/agent-runtime/
-RUN pnpm install --frozen-lockfile --filter @tessera/agent-runtime...
+RUN pnpm install --frozen-lockfile --filter @tessera/agent-runtime... && \
+    mkdir -p /app/packages/agent-runtime/node_modules
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/

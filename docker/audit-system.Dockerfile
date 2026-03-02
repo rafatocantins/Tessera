@@ -8,7 +8,8 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/audit-system/package.json packages/audit-system/
-RUN pnpm install --frozen-lockfile --filter @tessera/audit-system...
+RUN pnpm install --frozen-lockfile --filter @tessera/audit-system... && \
+    mkdir -p /app/packages/audit-system/node_modules
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/

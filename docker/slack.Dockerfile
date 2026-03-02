@@ -8,7 +8,8 @@ FROM base AS deps
 WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/channels/slack/package.json packages/channels/slack/
-RUN pnpm install --frozen-lockfile --filter @tessera/channel-slack
+RUN pnpm install --frozen-lockfile --filter @tessera/channel-slack && \
+    mkdir -p /app/packages/channels/slack/node_modules
 
 FROM deps AS build
 COPY packages/channels/slack/ packages/channels/slack/

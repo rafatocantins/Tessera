@@ -11,7 +11,8 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/credential-vault/package.json packages/credential-vault/
-RUN pnpm install --frozen-lockfile --filter @tessera/credential-vault...
+RUN pnpm install --frozen-lockfile --filter @tessera/credential-vault... && \
+    mkdir -p /app/packages/credential-vault/node_modules
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/

@@ -11,7 +11,8 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/sandbox-runtime/package.json packages/sandbox-runtime/
-RUN pnpm install --frozen-lockfile --filter @tessera/sandbox-runtime...
+RUN pnpm install --frozen-lockfile --filter @tessera/sandbox-runtime... && \
+    mkdir -p /app/packages/sandbox-runtime/node_modules
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/

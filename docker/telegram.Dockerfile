@@ -8,7 +8,8 @@ FROM base AS deps
 WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/channels/telegram/package.json packages/channels/telegram/
-RUN pnpm install --frozen-lockfile --filter @tessera/channel-telegram
+RUN pnpm install --frozen-lockfile --filter @tessera/channel-telegram && \
+    mkdir -p /app/packages/channels/telegram/node_modules
 
 FROM deps AS build
 COPY packages/channels/telegram/ packages/channels/telegram/

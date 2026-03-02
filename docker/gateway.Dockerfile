@@ -9,7 +9,8 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/gateway/package.json packages/gateway/
-RUN pnpm install --frozen-lockfile --filter @tessera/gateway...
+RUN pnpm install --frozen-lockfile --filter @tessera/gateway... && \
+    mkdir -p /app/packages/shared/node_modules /app/packages/gateway/node_modules
 
 # ── build stage ─────────────────────────────────────────────────────────────
 FROM deps AS build
