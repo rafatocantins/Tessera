@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-tools.sh — Build all SecureClaw built-in tool Docker images.
+# build-tools.sh — Build all Tessera built-in tool Docker images.
 #
 # Usage:
 #   ./scripts/build-tools.sh                     # build all, tag :latest
@@ -10,7 +10,7 @@
 # Requires Docker BuildKit (Docker 24+ or DOCKER_BUILDKIT=1).
 set -euo pipefail
 
-REPO="${REPO:-secureclaw}"
+REPO="${REPO:-tessera}"
 TAG="${TAG:-latest}"
 PUSH="${1:-}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -22,7 +22,7 @@ TOOLS=(
   "file-write"
 )
 
-echo "==> Building SecureClaw tool images (tag: ${TAG})"
+echo "==> Building Tessera tool images (tag: ${TAG})"
 echo "    context: ${ROOT}"
 echo
 

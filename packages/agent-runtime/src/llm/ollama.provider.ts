@@ -3,7 +3,7 @@
  */
 import { Ollama } from "ollama";
 import type { Message, Tool, ChatResponse } from "ollama";
-import { generateCallId } from "@secureclaw/shared";
+import { generateCallId } from "@tessera/shared";
 import type {
   LLMProvider,
   LLMMessage,

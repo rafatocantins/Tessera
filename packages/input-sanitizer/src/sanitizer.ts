@@ -9,7 +9,7 @@
  * 4. PII detection (sync, runs on outputs before destructive tools)
  * 5. Output guardrails (sync, runs before destructive tool execution)
  */
-import { InjectionDetectedError } from "@secureclaw/shared";
+import { InjectionDetectedError } from "@tessera/shared";
 import { scanForInjection, type InjectionScanResult } from "./heuristic/injection.detector.js";
 import { detectAndRedactPii, type PiiDetectionResult } from "./heuristic/pii.detector.js";
 import {

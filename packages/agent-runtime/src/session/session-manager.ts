@@ -5,8 +5,8 @@
  * No shared mutable state between sessions.
  * Sessions are destroyed completely when terminated.
  */
-import { randomUuid } from "@secureclaw/shared";
-import { SanitizerService } from "@secureclaw/input-sanitizer";
+import { randomUuid } from "@tessera/shared";
+import { SanitizerService } from "@tessera/input-sanitizer";
 import { createSessionContext, type SessionContext } from "./session-context.js";
 import { ApprovalGate } from "../tools/approval-gate.js";
 import type { LLMProvider } from "../llm/provider.interface.js";

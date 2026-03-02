@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# SecureClaw Sandbox Runtime — multi-stage build, non-root UID 10001
+# Tessera Sandbox Runtime — multi-stage build, non-root UID 10001
 # This service manages Docker containers (gVisor runsc), so it needs
 # access to the Docker socket. In production this should be via
 # Docker-in-Docker or a Docker proxy with minimal permissions.
@@ -11,14 +11,14 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/sandbox-runtime/package.json packages/sandbox-runtime/
-RUN pnpm install --frozen-lockfile --filter @secureclaw/sandbox-runtime...
+RUN pnpm install --frozen-lockfile --filter @tessera/sandbox-runtime...
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/
 COPY packages/sandbox-runtime/ packages/sandbox-runtime/
 COPY tsconfig.base.json ./
-RUN pnpm --filter @secureclaw/shared build && \
-    pnpm --filter @secureclaw/sandbox-runtime build
+RUN pnpm --filter @tessera/shared build && \
+    pnpm --filter @tessera/sandbox-runtime build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
@@ -26,9 +26,9 @@ WORKDIR /app
 # sandbox-runtime needs the docker group to access the socket
 # The docker socket is mounted at /var/run/docker.sock
 RUN addgroup -g 998 docker 2>/dev/null || true && \
-    addgroup -g 10001 secureclaw && \
-    adduser -u 10001 -G secureclaw -s /bin/sh -D secureclaw && \
-    adduser secureclaw docker
+    addgroup -g 10001 tessera && \
+    adduser -u 10001 -G tessera -s /bin/sh -D tessera && \
+    adduser tessera docker
 
 COPY --from=build --chown=10001:10001 /app/packages/shared/dist/ packages/shared/dist/
 COPY --from=build --chown=10001:10001 /app/packages/shared/package.json packages/shared/

@@ -20,7 +20,7 @@ import type {
   GrpcStoredMessage,
   GrpcDeleteUserDataRequest,
   GrpcDeleteUserDataResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
 type StreamCall<Req, Res> = grpc.ServerWritableStream<Req, Res>;

@@ -18,12 +18,12 @@ export type { SystemPromptParams } from "./prompt/system-prompt-builder.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const { initTelemetry, shutdownTelemetry } = await import("./telemetry.js");
   initTelemetry();
-  const { SanitizerService } = await import("@secureclaw/input-sanitizer");
+  const { SanitizerService } = await import("@tessera/input-sanitizer");
   const { SessionManager: Mgr } = await import("./session/session-manager.js");
   const { ToolPolicyEngine: Policy } = await import("./tools/policy-engine.js");
   const { AgentLoop: Loop } = await import("./llm/agent-loop.js");

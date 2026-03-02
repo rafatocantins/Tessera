@@ -5,8 +5,8 @@
  * Alert rules are evaluated after every write.
  */
 import { DatabaseSync, StatementSync } from "node:sqlite";
-import { nowUtcMs } from "@secureclaw/shared";
-import type { AuditEvent, AuditSeverity } from "@secureclaw/shared";
+import { nowUtcMs } from "@tessera/shared";
+import type { AuditEvent, AuditSeverity } from "@tessera/shared";
 import { ALERT_RULES, type AlertContext, type AlertFinding } from "./alert-rules.js";
 
 export interface LogEventParams {

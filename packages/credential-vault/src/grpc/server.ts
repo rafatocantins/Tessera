@@ -7,7 +7,7 @@
  * mTLS: loads credential-vault.crt / credential-vault.key from GRPC_CERTS_DIR.
  * Falls back to insecure transport when certs are absent (dev mode).
  */
-import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, serverCredentials } from "@tessera/shared";
 import type { VaultService } from "../vault.service.js";
 import { makeVaultImpl } from "./vault.impl.js";
 
@@ -16,7 +16,7 @@ export function startVaultGrpcServer(vaultSvc: VaultService): Promise<grpc.Serve
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proto = loadProto("vault.proto") as any;
-  const VaultServiceDef = proto.secureclaw?.vault?.v1?.VaultService as grpc.ServiceClientConstructor;
+  const VaultServiceDef = proto.tessera?.vault?.v1?.VaultService as grpc.ServiceClientConstructor;
 
   if (!VaultServiceDef) {
     throw new Error("Failed to load VaultService from vault.proto");

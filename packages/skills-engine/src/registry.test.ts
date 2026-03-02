@@ -11,7 +11,7 @@ import {
   signEd25519,
   SkillManifestSchema,
   type SkillManifest,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 import { SkillRegistry } from "./registry.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -332,7 +332,7 @@ describe("SkillRegistry — getAllToolDefinitions", () => {
 
 describe("SkillRegistry — persistence", () => {
   it("persists and loads from disk", () => {
-    const path = join(tmpdir(), `secureclaw-test-registry-${Date.now()}.json`);
+    const path = join(tmpdir(), `tessera-test-registry-${Date.now()}.json`);
     try {
       // Write
       const registry1 = new SkillRegistry(path);
@@ -349,14 +349,14 @@ describe("SkillRegistry — persistence", () => {
   });
 
   it("starts empty when registry file does not exist", () => {
-    const path = join(tmpdir(), `secureclaw-nonexistent-${Date.now()}.json`);
+    const path = join(tmpdir(), `tessera-nonexistent-${Date.now()}.json`);
     const registry = new SkillRegistry(path);
     expect(registry.size()).toBe(0);
     expect(existsSync(path)).toBe(false);
   });
 
   it("updates the file after remove", () => {
-    const path = join(tmpdir(), `secureclaw-test-remove-${Date.now()}.json`);
+    const path = join(tmpdir(), `tessera-test-remove-${Date.now()}.json`);
     try {
       const registry = new SkillRegistry(path);
       registry.install(makeSignedManifestJson());

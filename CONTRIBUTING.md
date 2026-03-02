@@ -1,4 +1,4 @@
-# Contributing to SecureClaw
+# Contributing to Tessera
 
 Thank you for your interest in contributing. This document explains how the project is organised, how to get your environment running, and what to expect during code review.
 
@@ -20,7 +20,7 @@ Thank you for your interest in contributing. This document explains how the proj
 ## 1. Project structure
 
 ```
-secureclaw/
+tessera/
 ├── packages/
 │   ├── shared/            # Zod schemas, crypto utils, gRPC proto files & loader, shared types
 │   ├── gateway/           # Fastify HTTP/WebSocket gateway (public-facing)
@@ -31,7 +31,7 @@ secureclaw/
 │   ├── skills-engine/     # Ed25519-verified skill bundle registry + executor
 │   ├── input-sanitizer/   # Prompt injection detection, PII redaction
 │   ├── memory-store/      # (Phase 2) Persistent conversation memory
-│   ├── cli/               # `secureclaw` CLI
+│   ├── cli/               # `tessera` CLI
 │   └── channels/
 │       └── webchat/       # Browser WebSocket test client
 ├── apps/
@@ -43,7 +43,7 @@ secureclaw/
 
 Everything is a pnpm workspace. The single `pnpm-lock.yaml` at the root pins all dependency versions. Never commit `node_modules/` or individual `package-lock.json` files.
 
-**Dependency rule**: packages may only import from `@secureclaw/shared`. No package may import from another service package (e.g., `gateway` must not import from `agent-runtime`). Communication is always via gRPC.
+**Dependency rule**: packages may only import from `@tessera/shared`. No package may import from another service package (e.g., `gateway` must not import from `agent-runtime`). Communication is always via gRPC.
 
 ---
 
@@ -56,13 +56,13 @@ Everything is a pnpm workspace. The single `pnpm-lock.yaml` at the root pins all
 | Node.js | 22 |
 | pnpm | 9 |
 | Docker + Compose plugin | any recent |
-| gVisor `runsc` | optional (set `SECURECLAW_ALLOW_RUNC=true` in dev) |
+| gVisor `runsc` | optional (set `TESSERA_ALLOW_RUNC=true` in dev) |
 
 ### First-time setup
 
 ```bash
-git clone https://github.com/your-username/secureclaw.git
-cd secureclaw
+git clone https://github.com/your-username/tessera.git
+cd tessera
 
 # Install all workspace dependencies
 pnpm install
@@ -82,8 +82,8 @@ bash scripts/start-dev.sh
 pnpm -r build
 
 # Build one package
-pnpm --filter @secureclaw/shared build
-pnpm --filter @secureclaw/agent-runtime build
+pnpm --filter @tessera/shared build
+pnpm --filter @tessera/agent-runtime build
 ```
 
 ### Typechecking
@@ -93,7 +93,7 @@ pnpm --filter @secureclaw/agent-runtime build
 pnpm -r typecheck
 
 # Typecheck one
-pnpm --filter @secureclaw/gateway typecheck
+pnpm --filter @tessera/gateway typecheck
 ```
 
 ### mTLS (optional)
@@ -115,11 +115,11 @@ Tests use [Vitest](https://vitest.dev/). Every package with a `test` script is i
 pnpm -r test
 
 # Run tests for a single package (with watch mode)
-pnpm --filter @secureclaw/shared test
-pnpm --filter @secureclaw/skills-engine test --watch
+pnpm --filter @tessera/shared test
+pnpm --filter @tessera/skills-engine test --watch
 
 # Run with coverage
-pnpm --filter @secureclaw/audit-system test --coverage
+pnpm --filter @tessera/audit-system test --coverage
 ```
 
 ### Test file conventions
@@ -182,7 +182,7 @@ docker inspect --format='{{index .RepoDigests 0}}' docker.io/yourname/my-tool:v1
 ### Step 2 — Generate an Ed25519 key pair (once per author)
 
 ```typescript
-import { generateEd25519KeyPair } from "@secureclaw/shared";
+import { generateEd25519KeyPair } from "@tessera/shared";
 
 const { publicKey, privateKey } = generateEd25519KeyPair();
 // publicKey and privateKey are hex-encoded DER strings
@@ -196,7 +196,7 @@ import {
   SkillManifestSchema,
   canonicalSkillPayload,
   signEd25519,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 const raw = {
   id: "yourname/my-tool",
@@ -237,7 +237,7 @@ const signed = JSON.stringify({ ...parsed, signature });
 ### Step 4 — Install via the gateway
 
 ```bash
-TOKEN=$(secureclaw token generate --user dev)
+TOKEN=$(tessera token generate --user dev)
 
 curl -X POST http://127.0.0.1:18789/api/v1/skills \
   -H "Authorization: Bearer $TOKEN" \
@@ -257,7 +257,7 @@ In production you can restrict which signing keys may install skills by setting 
 
 ## 6. How to add a new messaging channel
 
-Channels are separate packages under `packages/channels/`. Each channel connects to the gateway via WebSocket or HTTP and translates platform-specific events into SecureClaw's message protocol.
+Channels are separate packages under `packages/channels/`. Each channel connects to the gateway via WebSocket or HTTP and translates platform-specific events into Tessera's message protocol.
 
 ### Package setup
 
@@ -270,7 +270,7 @@ Create `package.json`:
 
 ```json
 {
-  "name": "@secureclaw/channel-my-channel",
+  "name": "@tessera/channel-my-channel",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -281,7 +281,7 @@ Create `package.json`:
     "lint": "eslint src"
   },
   "dependencies": {
-    "@secureclaw/shared": "workspace:*"
+    "@tessera/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.0.0",
@@ -349,7 +349,7 @@ Create `docker/channel-my-channel.Dockerfile` following the pattern of `docker/s
 - `read_only: true` filesystem
 - TCP healthcheck on the service port
 
-Add the service to `docker-compose.yml` on `secureclaw-net` only (no direct external exposure).
+Add the service to `docker-compose.yml` on `tessera-net` only (no direct external exposure).
 
 ---
 
@@ -410,4 +410,4 @@ We aim to acknowledge reports within 48 hours and to issue a fix or workaround w
 
 ## Questions?
 
-Open a [GitHub Discussion](https://github.com/your-username/secureclaw/discussions) for questions about the architecture or contribution process. Use Issues only for confirmed bugs or accepted feature requests.
+Open a [GitHub Discussion](https://github.com/your-username/tessera/discussions) for questions about the architecture or contribution process. Use Issues only for confirmed bugs or accepted feature requests.

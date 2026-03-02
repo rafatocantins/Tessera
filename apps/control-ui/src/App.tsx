@@ -1,5 +1,5 @@
 /**
- * App.tsx — SecureClaw Control UI root.
+ * App.tsx — Tessera Control UI root.
  *
  * State machine:
  *  - secret === null → <Login> screen
@@ -7,8 +7,9 @@
  *
  * The HMAC secret lives only in React state; never localStorage/sessionStorage.
  */
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Login } from "./components/Login.js";
+import { useToken } from "./hooks/useToken.js";
 import { ApprovalQueue } from "./components/ApprovalQueue.js";
 import { SessionList } from "./components/SessionList.js";
 import { AuditLog } from "./components/AuditLog.js";
@@ -23,6 +24,59 @@ export function App() {
   const [secret, setSecret] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("approvals");
   const [pendingCount, setPendingCount] = useState(0);
+  const [sessionStatus, setSessionStatus] = useState<"active" | "checking" | "expired">("active");
+  const [expirySeconds, setExpirySeconds] = useState(300);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // useToken is always called (no conditional hooks), but only does work when secret is non-empty
+  const { getToken } = useToken(secret ?? "");
+
+  // Fetch token config and start heartbeat when user logs in
+  useEffect(() => {
+    if (!secret) {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+      setSessionStatus("active");
+      return;
+    }
+
+    // Fetch the configured expiry window
+    void fetch("/api/v1/token/config")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        const d = data as { expiry_seconds?: number };
+        if (d.expiry_seconds && d.expiry_seconds > 0) setExpirySeconds(d.expiry_seconds);
+      })
+      .catch(() => { /* non-fatal — fall back to default 300s */ });
+
+    // Heartbeat: generate a fresh token and ping /health at (expiry - 60)s intervals.
+    // If /health fails, the secret is no longer valid → force re-login.
+    const intervalMs = Math.max((expirySeconds - 60) * 1000, 30_000);
+    heartbeatRef.current = setInterval(() => {
+      setSessionStatus("checking");
+      void getToken()
+        .then((token) =>
+          fetch("/health", { headers: { Authorization: `Bearer ${token}` } })
+        )
+        .then((r) => {
+          setSessionStatus(r.ok ? "active" : "expired");
+          if (!r.ok) {
+            if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+            setSecret(null);
+          }
+        })
+        .catch(() => {
+          setSessionStatus("expired");
+          if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+          setSecret(null);
+        });
+    }, intervalMs);
+
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secret, expirySeconds]);
 
   if (!secret) {
     return <Login onLogin={(s) => setSecret(s)} />;
@@ -33,7 +87,7 @@ export function App() {
       {/* Top bar */}
       <header style={s.header}>
         <div style={s.headerLeft}>
-          <span style={s.brand}>SecureClaw</span>
+          <span style={s.brand}>Tessera</span>
           <span style={s.brandSub}>Control UI</span>
         </div>
 
@@ -66,6 +120,7 @@ export function App() {
         </nav>
 
         <div style={s.headerRight}>
+          <SessionDot status={sessionStatus} expirySeconds={expirySeconds} />
           <span style={s.userLabel}>control-ui</span>
           <button
             style={s.logoutBtn}
@@ -95,6 +150,30 @@ export function App() {
         {tab === "marketplace" && <Marketplace secret={secret} />}
       </main>
     </div>
+  );
+}
+
+interface SessionDotProps {
+  status: "active" | "checking" | "expired";
+  expirySeconds: number;
+}
+
+function SessionDot({ status, expirySeconds }: SessionDotProps) {
+  const color = status === "active" ? "#4caf50" : status === "checking" ? "#ff9800" : "#f44";
+  const label =
+    status === "active"
+      ? `Session active — tokens valid for ${expirySeconds}s`
+      : status === "checking"
+      ? "Verifying session…"
+      : "Session expired";
+  return (
+    <span
+      title={label}
+      style={{
+        width: "8px", height: "8px", borderRadius: "50%",
+        background: color, display: "inline-block", flexShrink: 0,
+      }}
+    />
   );
 }
 

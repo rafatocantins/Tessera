@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.agent.v1;
+package tessera.agent.v1;
 
 // AgentService: called by the Gateway to interact with the Agent Runtime.
 // All responses are streamed to support real-time token streaming,

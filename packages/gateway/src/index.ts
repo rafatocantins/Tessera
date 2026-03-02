@@ -8,7 +8,7 @@ export { AgentGrpcClient } from "./grpc/agent.client.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const { AgentGrpcClient: Client } = await import("./grpc/agent.client.js");
@@ -19,7 +19,7 @@ if (isMain) {
   if (!process.env["GATEWAY_HMAC_SECRET"]) {
     process.stderr.write(
       "[gateway] WARNING: GATEWAY_HMAC_SECRET not set — using insecure dev default.\n" +
-      "[gateway]          Run 'secureclaw init' to generate secure secrets.\n"
+      "[gateway]          Run 'tessera init' to generate secure secrets.\n"
     );
   }
   setSecret(hmacSecret);

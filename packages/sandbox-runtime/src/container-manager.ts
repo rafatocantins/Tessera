@@ -6,7 +6,7 @@
  * Always cleans up containers after execution.
  */
 import Docker from "dockerode";
-import { SandboxError } from "@secureclaw/shared";
+import { SandboxError } from "@tessera/shared";
 import { buildHardenedContainerOptions, type ContainerBuildConfig } from "./container-config.js";
 
 export interface ToolRunResult {

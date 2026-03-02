@@ -1,5 +1,5 @@
 {
-  "name": "@secureclaw/input-sanitizer",
+  "name": "@tessera/input-sanitizer",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@secureclaw/shared": "workspace:*",
+    "@tessera/shared": "workspace:*",
     "zod": "^3.24.0"
   },
   "devDependencies": {

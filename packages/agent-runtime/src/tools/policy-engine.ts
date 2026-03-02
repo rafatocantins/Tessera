@@ -7,8 +7,8 @@
  *
  * Denials are logged to the audit system for visibility.
  */
-import type { ToolPolicyEntry, SecurityConfig } from "@secureclaw/shared";
-import { PolicyDeniedError } from "@secureclaw/shared";
+import type { ToolPolicyEntry, SecurityConfig } from "@tessera/shared";
+import { PolicyDeniedError } from "@tessera/shared";
 
 export interface PolicyDecisionResult {
   allowed: boolean;

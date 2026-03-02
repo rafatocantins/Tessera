@@ -4,7 +4,7 @@
  * Used by the gateway to forward WebSocket messages to the agent runtime.
  * The sendMessage call returns an async iterable of AgentChunk messages.
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcCreateSessionRequest,
   GrpcCreateSessionResponse,
@@ -21,7 +21,7 @@ import type {
   GrpcListPendingApprovalsRequest,
   GrpcListPendingApprovalsResponse,
   GrpcPendingApprovalSummary,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 export interface SessionStatus {
   session_id: string;
@@ -40,7 +40,7 @@ export class AgentGrpcClient {
     const target = addr ?? process.env["AGENT_RUNTIME_ADDR"] ?? "127.0.0.1:19001";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("agent.proto") as any;
-    const AgentServiceClient = proto.secureclaw?.agent?.v1?.AgentService as grpc.ServiceClientConstructor;
+    const AgentServiceClient = proto.tessera?.agent?.v1?.AgentService as grpc.ServiceClientConstructor;
     if (!AgentServiceClient) {
       throw new Error("Failed to load AgentService from agent.proto");
     }

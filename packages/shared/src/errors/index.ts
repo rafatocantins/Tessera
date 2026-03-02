@@ -1,22 +1,22 @@
-export { SecureClawError } from "./base.error.js";
+export { TesseraError } from "./base.error.js";
 
-import { SecureClawError } from "./base.error.js";
+import { TesseraError } from "./base.error.js";
 
-export class AuthenticationError extends SecureClawError {
+export class AuthenticationError extends TesseraError {
   constructor(message: string, context?: Record<string, unknown>) {
     super(message, "AUTH_FAILED", context);
     this.name = "AuthenticationError";
   }
 }
 
-export class AuthorizationError extends SecureClawError {
+export class AuthorizationError extends TesseraError {
   constructor(message: string, context?: Record<string, unknown>) {
     super(message, "AUTHORIZATION_FAILED", context);
     this.name = "AuthorizationError";
   }
 }
 
-export class PolicyDeniedError extends SecureClawError {
+export class PolicyDeniedError extends TesseraError {
   readonly tool_id: string;
   constructor(toolId: string, reason: string) {
     super(`Tool '${toolId}' denied by policy: ${reason}`, "POLICY_DENIED", { tool_id: toolId, reason });
@@ -25,7 +25,7 @@ export class PolicyDeniedError extends SecureClawError {
   }
 }
 
-export class CostCapError extends SecureClawError {
+export class CostCapError extends TesseraError {
   constructor(currentUsd: number, capUsd: number) {
     super(
       `Daily cost cap exceeded: $${currentUsd.toFixed(4)} / $${capUsd.toFixed(2)}`,
@@ -36,7 +36,7 @@ export class CostCapError extends SecureClawError {
   }
 }
 
-export class InjectionDetectedError extends SecureClawError {
+export class InjectionDetectedError extends TesseraError {
   constructor(pattern: string, excerpt: string) {
     super(
       `Prompt injection detected: pattern '${pattern}'`,
@@ -47,28 +47,28 @@ export class InjectionDetectedError extends SecureClawError {
   }
 }
 
-export class SandboxError extends SecureClawError {
+export class SandboxError extends TesseraError {
   constructor(message: string, context?: Record<string, unknown>) {
     super(message, "SANDBOX_ERROR", context);
     this.name = "SandboxError";
   }
 }
 
-export class CredentialError extends SecureClawError {
+export class CredentialError extends TesseraError {
   constructor(message: string, context?: Record<string, unknown>) {
     super(message, "CREDENTIAL_ERROR", context);
     this.name = "CredentialError";
   }
 }
 
-export class SessionError extends SecureClawError {
+export class SessionError extends TesseraError {
   constructor(message: string, context?: Record<string, unknown>) {
     super(message, "SESSION_ERROR", context);
     this.name = "SessionError";
   }
 }
 
-export class ValidationError extends SecureClawError {
+export class ValidationError extends TesseraError {
   constructor(message: string, issues: unknown[]) {
     super(message, "VALIDATION_ERROR", { issues });
     this.name = "ValidationError";

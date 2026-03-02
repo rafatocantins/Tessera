@@ -140,7 +140,7 @@ export function Marketplace({ secret }: MarketplaceProps) {
         <div style={s.empty}>
           <div>No skills found in the marketplace.</div>
           <div style={{ fontSize: "12px", marginTop: "8px", color: "#444" }}>
-            Publish a skill with: secureclaw skill publish manifest.json
+            Publish a skill with: tessera skill publish manifest.json
           </div>
         </div>
       )}

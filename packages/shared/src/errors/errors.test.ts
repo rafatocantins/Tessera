@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  SecureClawError,
+  TesseraError,
   AuthenticationError,
   AuthorizationError,
   PolicyDeniedError,
@@ -12,41 +12,41 @@ import {
   ValidationError,
 } from "./index.js";
 
-describe("SecureClawError", () => {
+describe("TesseraError", () => {
   it("is an instance of Error", () => {
-    const err = new SecureClawError("test", "TEST_CODE");
+    const err = new TesseraError("test", "TEST_CODE");
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(SecureClawError);
+    expect(err).toBeInstanceOf(TesseraError);
   });
 
   it("stores message, code, and context", () => {
     const ctx = { detail: "extra info" };
-    const err = new SecureClawError("something went wrong", "MY_CODE", ctx);
+    const err = new TesseraError("something went wrong", "MY_CODE", ctx);
     expect(err.message).toBe("something went wrong");
     expect(err.code).toBe("MY_CODE");
     expect(err.context).toEqual(ctx);
   });
 
-  it("has name 'SecureClawError'", () => {
-    expect(new SecureClawError("m", "C").name).toBe("SecureClawError");
+  it("has name 'TesseraError'", () => {
+    expect(new TesseraError("m", "C").name).toBe("TesseraError");
   });
 
   it("defaults context to empty object", () => {
-    const err = new SecureClawError("msg", "CODE");
+    const err = new TesseraError("msg", "CODE");
     expect(err.context).toEqual({});
   });
 
   it("has a stack trace", () => {
-    const err = new SecureClawError("msg", "CODE");
+    const err = new TesseraError("msg", "CODE");
     expect(err.stack).toBeDefined();
     expect(err.stack!.length).toBeGreaterThan(0);
   });
 });
 
 describe("AuthenticationError", () => {
-  it("extends SecureClawError", () => {
+  it("extends TesseraError", () => {
     const err = new AuthenticationError("bad token");
-    expect(err).toBeInstanceOf(SecureClawError);
+    expect(err).toBeInstanceOf(TesseraError);
   });
 
   it("has code AUTH_FAILED", () => {

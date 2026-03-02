@@ -7,7 +7,7 @@
  * POST /sessions/:id/approve/:callId — Respond to a tool approval request
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { CreateSessionRequestSchema } from "@secureclaw/shared";
+import { CreateSessionRequestSchema } from "@tessera/shared";
 import { verifyToken, blockTokenInQueryParams } from "../plugins/auth.plugin.js";
 import type { AgentGrpcClient } from "../grpc/agent.client.js";
 

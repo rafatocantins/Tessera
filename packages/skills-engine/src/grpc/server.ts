@@ -7,7 +7,7 @@
  * mTLS: loads skills-engine.crt / skills-engine.key from GRPC_CERTS_DIR.
  * Falls back to insecure transport when certs are absent (dev mode).
  */
-import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, serverCredentials } from "@tessera/shared";
 import type { SkillRegistry } from "../registry.js";
 import type { SandboxGrpcClient } from "../sandbox.client.js";
 import type { MarketplaceRegistry } from "../marketplace.js";
@@ -22,7 +22,7 @@ export function startSkillsGrpcServer(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proto = loadProto("skills.proto") as any;
-  const SkillsService = proto.secureclaw?.skills?.v1?.SkillsService as grpc.ServiceClientConstructor;
+  const SkillsService = proto.tessera?.skills?.v1?.SkillsService as grpc.ServiceClientConstructor;
 
   if (!SkillsService) {
     throw new Error("Failed to load SkillsService from skills.proto");

@@ -7,7 +7,7 @@
  * mTLS: loads audit-system.crt / audit-system.key from GRPC_CERTS_DIR.
  * Falls back to insecure transport when certs are absent (dev mode).
  */
-import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, serverCredentials } from "@tessera/shared";
 import type { AuditService } from "../audit.service.js";
 import { makeAuditImpl } from "./audit.impl.js";
 
@@ -16,7 +16,7 @@ export function startAuditGrpcServer(auditSvc: AuditService): Promise<grpc.Serve
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proto = loadProto("audit.proto") as any;
-  const AuditService = proto.secureclaw?.audit?.v1?.AuditService as grpc.ServiceClientConstructor;
+  const AuditService = proto.tessera?.audit?.v1?.AuditService as grpc.ServiceClientConstructor;
 
   if (!AuditService) {
     throw new Error("Failed to load AuditService from audit.proto");

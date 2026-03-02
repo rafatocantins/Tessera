@@ -1,5 +1,5 @@
 /**
- * skill.ts — `secureclaw skill` subcommands for the marketplace.
+ * skill.ts — `tessera skill` subcommands for the marketplace.
  *
  * publish   — Publish a signed skill manifest to the marketplace
  * list      — Browse marketplace skills
@@ -28,7 +28,7 @@ function resolveToken(opts: { token?: string }): string {
   if (!token) {
     process.stderr.write(
       "error: bearer token required — pass --token or set GATEWAY_TOKEN\n" +
-      "       generate one with: secureclaw token generate --user <id> --secret <secret>\n"
+      "       generate one with: tessera token generate --user <id> --secret <secret>\n"
     );
     process.exit(1);
   }
@@ -114,7 +114,7 @@ export function skillCommand(): Command {
     .command("list")
     .description("Browse available skills in the marketplace")
     .option("-s, --search <query>", "Search by name or description")
-    .option("--namespace <ns>", "Filter by namespace (e.g. 'secureclaw')")
+    .option("--namespace <ns>", "Filter by namespace (e.g. 'tessera')")
     .option("--tag <tag>", "Filter by tag")
     .option(
       "--url <baseUrl>",

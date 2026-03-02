@@ -24,7 +24,7 @@ const _require = createRequire(import.meta.url);
 
 function getProtoDir(): string {
   // Resolve the shared package's root from its package.json
-  const sharedPkgJson = _require.resolve("@secureclaw/shared/package.json");
+  const sharedPkgJson = _require.resolve("@tessera/shared/package.json");
   return path.join(path.dirname(sharedPkgJson), "src", "proto");
 }
 

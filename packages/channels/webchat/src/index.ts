@@ -7,7 +7,7 @@
  * 3. Relays messages between browser and gateway
  *
  * Authentication: The browser client must obtain a Bearer token from the
- * CLI (`secureclaw token generate`) and include it in the WebSocket
+ * CLI (`tessera token generate`) and include it in the WebSocket
  * upgrade request Authorization header.
  */
 

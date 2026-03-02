@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.audit.v1;
+package tessera.audit.v1;
 
 // AuditService: immutable append-only audit log.
 // CRITICAL: No update or delete methods exist. Append-only enforced at DB layer.

@@ -25,7 +25,7 @@ export function initTelemetry(): void {
       import("@opentelemetry/resources").then(({ Resource }) =>
         import("@opentelemetry/semantic-conventions").then(({ ATTR_SERVICE_NAME }) => {
           sdk = new NodeSDK({
-            resource: new Resource({ [ATTR_SERVICE_NAME]: "secureclaw-agent-runtime" }),
+            resource: new Resource({ [ATTR_SERVICE_NAME]: "tessera-agent-runtime" }),
             traceExporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
           });
           sdk.start();
@@ -39,7 +39,7 @@ export function initTelemetry(): void {
 }
 
 export function getTracer(): Tracer {
-  return trace.getTracer("secureclaw-agent-runtime", "0.1.0");
+  return trace.getTracer("tessera-agent-runtime", "0.1.0");
 }
 
 export async function shutdownTelemetry(): Promise<void> {

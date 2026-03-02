@@ -1,7 +1,7 @@
 /**
  * gateway-client.ts — Standalone gateway adapter for channel services.
  *
- * Intentionally has no dependency on @secureclaw/shared to avoid build-graph
+ * Intentionally has no dependency on @tessera/shared to avoid build-graph
  * coupling. Re-implements the 5-line token generation that matches auth.plugin.ts.
  */
 import crypto from "node:crypto";

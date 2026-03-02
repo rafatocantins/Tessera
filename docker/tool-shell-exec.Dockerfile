@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# secureclaw/shell-exec — minimal Alpine + bash tool runner
+# tessera/shell-exec — minimal Alpine + bash tool runner
 # Container is started as nobody:nogroup (65534:65534) by sandbox-runtime.
 FROM node:22-alpine
 

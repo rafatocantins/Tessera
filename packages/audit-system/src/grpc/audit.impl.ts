@@ -23,8 +23,8 @@ import type {
   GrpcComplianceReportResponse,
   GrpcGetTeamCostSummaryRequest,
   GrpcGetTeamCostSummaryResponse,
-} from "@secureclaw/shared";
-import type { AuditSeverity } from "@secureclaw/shared";
+} from "@tessera/shared";
+import type { AuditSeverity } from "@tessera/shared";
 
 type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
 type StreamCall<Req, Res> = grpc.ServerWritableStream<Req, Res>;

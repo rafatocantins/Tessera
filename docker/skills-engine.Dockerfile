@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# SecureClaw Skills Engine — multi-stage build, non-root UID 10001
+# Tessera Skills Engine — multi-stage build, non-root UID 10001
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -8,20 +8,20 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/skills-engine/package.json packages/skills-engine/
-RUN pnpm install --frozen-lockfile --filter @secureclaw/skills-engine...
+RUN pnpm install --frozen-lockfile --filter @tessera/skills-engine...
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/
 COPY packages/skills-engine/ packages/skills-engine/
 COPY tsconfig.base.json ./
-RUN pnpm --filter @secureclaw/shared build && \
-    pnpm --filter @secureclaw/skills-engine build
+RUN pnpm --filter @tessera/shared build && \
+    pnpm --filter @tessera/skills-engine build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
-RUN addgroup -g 10001 secureclaw && \
-    adduser -u 10001 -G secureclaw -s /bin/sh -D secureclaw && \
+RUN addgroup -g 10001 tessera && \
+    adduser -u 10001 -G tessera -s /bin/sh -D tessera && \
     mkdir -p /data/skills && chown 10001:10001 /data/skills
 
 COPY --from=build --chown=10001:10001 /app/packages/shared/dist/ packages/shared/dist/

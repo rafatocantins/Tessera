@@ -1,5 +1,5 @@
 {
-  "name": "@secureclaw/agent-runtime",
+  "name": "@tessera/agent-runtime",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,8 +22,8 @@
     "@opentelemetry/resources": "^1.27.0",
     "@opentelemetry/sdk-node": "^0.53.0",
     "@opentelemetry/semantic-conventions": "^1.27.0",
-    "@secureclaw/input-sanitizer": "workspace:*",
-    "@secureclaw/shared": "workspace:*",
+    "@tessera/input-sanitizer": "workspace:*",
+    "@tessera/shared": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "ollama": "^0.5.0",
     "openai": "^4.77.0",

@@ -1,5 +1,5 @@
 {
-  "name": "@secureclaw/skills-engine",
+  "name": "@tessera/skills-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.7.15",
-    "@secureclaw/shared": "workspace:*"
+    "@tessera/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

@@ -1,5 +1,5 @@
 {
-  "name": "@secureclaw/channel-webchat",
+  "name": "@tessera/channel-webchat",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@secureclaw/shared": "workspace:*"
+    "@tessera/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

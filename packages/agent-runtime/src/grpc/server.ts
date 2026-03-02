@@ -7,7 +7,7 @@
  * mTLS: loads agent-runtime.crt / agent-runtime.key from GRPC_CERTS_DIR.
  * Falls back to insecure transport when certs are absent (dev mode).
  */
-import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, serverCredentials } from "@tessera/shared";
 import type { SessionManager } from "../session/session-manager.js";
 import type { AgentLoop } from "../llm/agent-loop.js";
 import { makeAgentImpl } from "./agent.impl.js";
@@ -20,7 +20,7 @@ export function startAgentGrpcServer(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proto = loadProto("agent.proto") as any;
-  const AgentServiceDef = proto.secureclaw?.agent?.v1?.AgentService as grpc.ServiceClientConstructor;
+  const AgentServiceDef = proto.tessera?.agent?.v1?.AgentService as grpc.ServiceClientConstructor;
 
   if (!AgentServiceDef) {
     throw new Error("Failed to load AgentService from agent.proto");

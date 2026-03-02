@@ -11,7 +11,7 @@ export type { ContainerBuildConfig } from "./container-config.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const { SandboxService: Svc } = await import("./sandbox.service.js");

@@ -1,5 +1,5 @@
 {
-  "name": "secureclaw",
+  "name": "tessera",
   "private": true,
   "version": "0.1.0",
   "description": "Your secure personal AI agent. Defense in depth. Zero trust by default.",
@@ -20,10 +20,10 @@
     "dev:audit":    "node packages/audit-system/dist/index.js",
     "dev:memory":   "node packages/memory-store/dist/index.js",
     "dev:skills":   "node packages/skills-engine/dist/index.js",
-    "dev:sandbox":  "cross-env SECURECLAW_ALLOW_RUNC=true node packages/sandbox-runtime/dist/index.js",
+    "dev:sandbox":  "cross-env TESSERA_ALLOW_RUNC=true node packages/sandbox-runtime/dist/index.js",
     "dev:agent":    "node packages/agent-runtime/dist/index.js",
     "dev:gateway":  "node packages/gateway/dist/index.js",
-    "dev:ui":       "pnpm --filter @secureclaw/control-ui dev",
+    "dev:ui":       "pnpm --filter @tessera/control-ui dev",
 
     "dev:services": "concurrently --kill-others-on-fail -n vault,audit,mem,skills,box,agent,gw -c magenta,blue,cyan,yellow,red,green,white \"pnpm dev:vault\" \"pnpm dev:audit\" \"pnpm dev:memory\" \"pnpm dev:skills\" \"pnpm dev:sandbox\" \"pnpm dev:agent\" \"pnpm dev:gateway\"",
     "dev":          "concurrently --kill-others-on-fail -n vault,audit,mem,skills,box,agent,gw,ui -c magenta,blue,cyan,yellow,red,green,white,bgBlue.white \"pnpm dev:vault\" \"pnpm dev:audit\" \"pnpm dev:memory\" \"pnpm dev:skills\" \"pnpm dev:sandbox\" \"pnpm dev:agent\" \"pnpm dev:gateway\" \"pnpm dev:ui\"",

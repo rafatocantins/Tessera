@@ -10,7 +10,7 @@ export type { AlertRule, AlertFinding, AlertContext } from "./alert-rules.js";
 // Called when this package is run directly: node dist/index.js
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const { createAuditDatabase: createDb } = await import("./database/connection.js");
@@ -18,7 +18,7 @@ if (isMain) {
   const { AuditService: Svc } = await import("./audit.service.js");
   const { startAuditGrpcServer: start } = await import("./grpc/server.js");
 
-  const dataDir = process.env["AUDIT_DATA_DIR"] ?? "/tmp/secureclaw-audit";
+  const dataDir = process.env["AUDIT_DATA_DIR"] ?? "/tmp/tessera-audit";
   const db = createDb(dataDir);
   init(db);
   const costCapUsd = parseFloat(process.env["AUDIT_COST_CAP_USD"] ?? "5.0");

@@ -4,7 +4,7 @@
  * API keys are passed in at creation time from the credential vault.
  * The factory never stores or logs raw API keys.
  */
-import type { LLMProviderConfig } from "@secureclaw/shared";
+import type { LLMProviderConfig } from "@tessera/shared";
 import { AnthropicProvider } from "./anthropic.provider.js";
 import { OpenAIProvider } from "./openai.provider.js";
 import { GeminiProvider } from "./gemini.provider.js";

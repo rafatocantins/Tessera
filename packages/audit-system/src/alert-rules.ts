@@ -4,7 +4,7 @@
  * Rules are evaluated after every audit event is persisted.
  * A rule returns an AlertFinding if it triggers, null otherwise.
  */
-import type { AuditEvent, AuditSeverity } from "@secureclaw/shared";
+import type { AuditEvent, AuditSeverity } from "@tessera/shared";
 
 export interface AlertContext {
   toolCallsLastMinute: number;

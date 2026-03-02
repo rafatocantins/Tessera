@@ -7,7 +7,7 @@
  * mTLS: loads memory-store.crt / memory-store.key from GRPC_CERTS_DIR.
  * Falls back to insecure transport when certs are absent (dev mode).
  */
-import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, serverCredentials } from "@tessera/shared";
 import type { MemoryService } from "../memory.service.js";
 import { makeMemoryImpl } from "./memory.impl.js";
 
@@ -17,7 +17,7 @@ export function startMemoryGrpcServer(memorySvc: MemoryService): Promise<grpc.Se
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proto = loadProto("memory.proto") as any;
   const MemoryServiceClient =
-    proto.secureclaw?.memory?.v1?.MemoryService as grpc.ServiceClientConstructor;
+    proto.tessera?.memory?.v1?.MemoryService as grpc.ServiceClientConstructor;
 
   if (!MemoryServiceClient) {
     throw new Error("Failed to load MemoryService from memory.proto");

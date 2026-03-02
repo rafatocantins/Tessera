@@ -12,7 +12,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { type SkillManifest, type SkillToolDefinition } from "@secureclaw/shared";
+import { type SkillManifest, type SkillToolDefinition } from "@tessera/shared";
 import { verifySkillManifest, type SkillVerificationResult } from "./verifier.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@
  * Used by AgentLoop to discover dynamically installed skill tools and
  * delegate execution to the skills-engine (which in turn calls sandbox-runtime).
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcInstallSkillRequest,
   GrpcInstallSkillResponse,
@@ -17,7 +17,7 @@ import type {
   GrpcRemoveSkillResponse,
   GrpcExecuteSkillToolRequest,
   GrpcExecuteSkillToolResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 export type { GrpcSkillSummary };
 
@@ -38,7 +38,7 @@ export class SkillsGrpcClient {
     const target = addr ?? process.env["SKILLS_ADDR"] ?? "127.0.0.1:19005";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("skills.proto") as any;
-    const SkillsServiceClient = proto.secureclaw?.skills?.v1?.SkillsService as grpc.ServiceClientConstructor;
+    const SkillsServiceClient = proto.tessera?.skills?.v1?.SkillsService as grpc.ServiceClientConstructor;
     if (!SkillsServiceClient) {
       throw new Error("Failed to load SkillsService from skills.proto");
     }

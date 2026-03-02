@@ -1,5 +1,5 @@
 {
-  "name": "@secureclaw/credential-vault",
+  "name": "@tessera/credential-vault",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.12.0",
     "@grpc/proto-loader": "^0.7.0",
-    "@secureclaw/shared": "workspace:*",
+    "@tessera/shared": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "keytar": "^7.9.0",
     "zod": "^3.24.0"

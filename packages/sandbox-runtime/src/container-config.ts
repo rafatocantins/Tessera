@@ -1,7 +1,7 @@
 /**
  * container-config.ts — Hardened container configuration builder.
  *
- * Every container created by SecureClaw's sandbox runtime uses these settings.
+ * Every container created by Tessera's sandbox runtime uses these settings.
  * Security properties enforced:
  * - gVisor (runsc) runtime: kernel-level isolation
  * - ALL Linux capabilities dropped: no privileged operations
@@ -64,9 +64,9 @@ export function buildHardenedContainerOptions(
     Tty: false,
     User: NOBODY_UID,
     Labels: {
-      "secureclaw.call_id": cfg.callId,
-      "secureclaw.managed": "true",
-      "secureclaw.created_at": new Date().toISOString(),
+      "tessera.call_id": cfg.callId,
+      "tessera.managed": "true",
+      "tessera.created_at": new Date().toISOString(),
     },
     HostConfig: {
       // CRITICAL: Use gVisor (runsc) for kernel-level isolation

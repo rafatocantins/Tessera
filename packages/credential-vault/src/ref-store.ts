@@ -6,7 +6,7 @@
  * from the keychain. Raw values are NEVER stored in SQLite.
  */
 import Database from "better-sqlite3";
-import { randomUuid, nowUtcIso } from "@secureclaw/shared";
+import { randomUuid, nowUtcIso } from "@tessera/shared";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 

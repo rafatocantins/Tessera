@@ -1,5 +1,5 @@
 /**
- * memory-store — persistent conversation memory for SecureClaw agents.
+ * memory-store — persistent conversation memory for Tessera agents.
  *
  * SQLite-backed (better-sqlite3), gRPC server on port 19006.
  * FTS5 full-text search over message content.
@@ -21,7 +21,7 @@ const isMain =
   process.argv[1].endsWith("index.js");
 
 if (isMain) {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const { createMemoryDatabase: createDb } = await import("./db/connection.js");

@@ -12,7 +12,7 @@ import type {
   GrpcRunToolResponse,
   GrpcStopContainerRequest,
   GrpcStopContainerResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
 type Callback<Res> = grpc.sendUnaryData<Res>;

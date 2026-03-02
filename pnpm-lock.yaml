@@ -88,10 +88,10 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.27.0
         version: 1.39.0
-      '@secureclaw/input-sanitizer':
+      '@tessera/input-sanitizer':
         specifier: workspace:*
         version: link:../input-sanitizer
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       better-sqlite3:
@@ -128,7 +128,7 @@ importers:
       '@grpc/proto-loader':
         specifier: ^0.7.0
         version: 0.7.15
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -185,7 +185,7 @@ importers:
 
   packages/channels/webchat:
     dependencies:
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../../shared
     devDependencies:
@@ -201,7 +201,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       commander:
@@ -223,7 +223,7 @@ importers:
       '@grpc/proto-loader':
         specifier: ^0.7.0
         version: 0.7.15
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       better-sqlite3:
@@ -269,7 +269,7 @@ importers:
       '@grpc/proto-loader':
         specifier: ^0.7.0
         version: 0.7.15
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       fastify:
@@ -291,7 +291,7 @@ importers:
 
   packages/input-sanitizer:
     dependencies:
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -328,7 +328,7 @@ importers:
       '@grpc/proto-loader':
         specifier: ^0.7.0
         version: 0.7.15
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -350,7 +350,7 @@ importers:
       '@grpc/proto-loader':
         specifier: ^0.7.0
         version: 0.7.15
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
       dockerode:
@@ -403,7 +403,7 @@ importers:
       '@grpc/proto-loader':
         specifier: ^0.7.15
         version: 0.7.15
-      '@secureclaw/shared':
+      '@tessera/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:

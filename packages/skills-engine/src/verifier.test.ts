@@ -12,7 +12,7 @@ import {
   signEd25519,
   SkillManifestSchema,
   type SkillManifest,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 import { verifySkillManifest, verifySkillManifestTrusted } from "./verifier.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ import { verifySkillManifest, verifySkillManifestTrusted } from "./verifier.js";
 /** Builds a minimal valid manifest (unsigned) */
 function buildManifest(overrides: Partial<SkillManifest> = {}): SkillManifest {
   return {
-    id: "secureclaw/test-skill",
+    id: "tessera/test-skill",
     name: "Test Skill",
     version: "1.0.0",
     description: "A test skill for unit tests",
@@ -83,7 +83,7 @@ describe("verifySkillManifest — valid manifests", () => {
   it("returns the parsed manifest on success", () => {
     const manifestJson = signManifest(buildManifest());
     const result = verifySkillManifest(manifestJson);
-    expect(result.manifest?.id).toBe("secureclaw/test-skill");
+    expect(result.manifest?.id).toBe("tessera/test-skill");
     expect(result.manifest?.version).toBe("1.0.0");
     expect(result.manifest?.tools).toHaveLength(1);
   });

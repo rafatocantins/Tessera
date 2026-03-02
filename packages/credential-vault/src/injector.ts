@@ -10,8 +10,8 @@
  *
  * The injector resolves the placeholder to the actual value before execution.
  */
-import { parseVaultRef } from "@secureclaw/shared";
-import { CredentialError } from "@secureclaw/shared";
+import { parseVaultRef } from "@tessera/shared";
+import { CredentialError } from "@tessera/shared";
 import type { KeychainAdapter } from "./keychain.adapter.js";
 import type { RefStore } from "./ref-store.js";
 

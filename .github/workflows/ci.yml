@@ -85,13 +85,13 @@ jobs:
 
       - name: Build shared (dependency)
         if: matrix.package != 'shared'
-        run: pnpm --filter @secureclaw/shared build
+        run: pnpm --filter @tessera/shared build
 
       - name: Typecheck ${{ matrix.package }}
-        run: pnpm --filter "@secureclaw/${{ matrix.package }}" typecheck
+        run: pnpm --filter "@tessera/${{ matrix.package }}" typecheck
 
       - name: Lint ${{ matrix.package }}
-        run: pnpm --filter "@secureclaw/${{ matrix.package }}" lint
+        run: pnpm --filter "@tessera/${{ matrix.package }}" lint
         continue-on-error: false
 
   # ── Unit tests ─────────────────────────────────────────────────────────────
@@ -125,10 +125,10 @@ jobs:
 
       - name: Build shared
         if: matrix.package != 'shared'
-        run: pnpm --filter @secureclaw/shared build
+        run: pnpm --filter @tessera/shared build
 
       - name: Run tests (${{ matrix.package }})
-        run: pnpm --filter "@secureclaw/${{ matrix.package }}" test
+        run: pnpm --filter "@tessera/${{ matrix.package }}" test
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -190,7 +190,7 @@ jobs:
           context: .
           file: docker/${{ matrix.service }}.Dockerfile
           push: false
-          tags: secureclaw/${{ matrix.service }}:ci
+          tags: tessera/${{ matrix.service }}:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker
@@ -198,7 +198,7 @@ jobs:
       - name: Scan for vulnerabilities (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: secureclaw/${{ matrix.service }}:ci
+          image-ref: tessera/${{ matrix.service }}:ci
           format: sarif
           output: trivy-${{ matrix.service }}.sarif
           severity: CRITICAL,HIGH
@@ -237,7 +237,7 @@ jobs:
           context: .
           file: docker/tool-${{ matrix.tool }}.Dockerfile
           push: false
-          tags: secureclaw/${{ matrix.tool }}:ci
+          tags: tessera/${{ matrix.tool }}:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker
@@ -245,7 +245,7 @@ jobs:
       - name: Scan for vulnerabilities (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: secureclaw/${{ matrix.tool }}:ci
+          image-ref: tessera/${{ matrix.tool }}:ci
           format: sarif
           output: trivy-tool-${{ matrix.tool }}.sarif
           severity: CRITICAL,HIGH
@@ -285,9 +285,9 @@ jobs:
       - name: Validate config schema
         run: |
           node -e "
-            import('@secureclaw/shared').then(({ SecureClawConfigSchema }) => {
+            import('@tessera/shared').then(({ TesseraConfigSchema }) => {
               const cfg = JSON.parse(require('fs').readFileSync('config/defaults.json', 'utf-8'));
-              SecureClawConfigSchema.parse(cfg);
+              TesseraConfigSchema.parse(cfg);
               console.log('Config schema valid');
             });
           "
@@ -320,7 +320,7 @@ jobs:
         run: bash scripts/build-tools.sh
 
       - name: Run integration tests
-        run: pnpm --filter @secureclaw/integration test
+        run: pnpm --filter @tessera/integration test
         env:
           GATEWAY_HMAC_SECRET: integration-test-secret
           VAULT_MASTER_KEY: integration-test-vault-key

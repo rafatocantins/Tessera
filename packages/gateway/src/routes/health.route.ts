@@ -13,7 +13,7 @@ export async function healthRoute(fastify: FastifyInstance): Promise<void> {
     // Exempt from rate limiting — Docker healthchecks must always succeed
     { config: { rateLimit: false } },
     async (_req, reply) => {
-      await reply.send({ status: "ok", service: "secureclaw-gateway" });
+      await reply.send({ status: "ok", service: "tessera-gateway" });
     }
   );
 }

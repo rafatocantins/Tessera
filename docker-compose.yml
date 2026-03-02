@@ -1,4 +1,4 @@
-# SecureClaw Production Compose
+# Tessera Production Compose
 # Security hardening:
 # - All services run as non-root UID 10001
 # - No capabilities granted
@@ -7,7 +7,7 @@
 # - mTLS between services via certs/ volume
 
 networks:
-  secureclaw-net:
+  tessera-net:
     driver: bridge
     internal: true          # no outbound internet from service network
   gateway-net:
@@ -29,7 +29,7 @@ services:
       dockerfile: docker/gateway.Dockerfile
     networks:
       - gateway-net
-      - secureclaw-net
+      - tessera-net
     ports:
       - "127.0.0.1:18789:18789"   # loopback only — no 0.0.0.0 exposure
     environment:
@@ -65,7 +65,7 @@ services:
       context: .
       dockerfile: docker/agent-runtime.Dockerfile
     networks:
-      - secureclaw-net
+      - tessera-net
     environment:
       NODE_ENV: production
       VAULT_ADDR: "credential-vault:19002"
@@ -109,7 +109,7 @@ services:
       context: .
       dockerfile: docker/credential-vault.Dockerfile
     networks:
-      - secureclaw-net
+      - tessera-net
     environment:
       NODE_ENV: production
       VAULT_MASTER_KEY: "${VAULT_MASTER_KEY:?VAULT_MASTER_KEY is required}"
@@ -128,7 +128,7 @@ services:
       context: .
       dockerfile: docker/audit-system.Dockerfile
     networks:
-      - secureclaw-net
+      - tessera-net
     environment:
       NODE_ENV: production
     volumes:
@@ -149,7 +149,7 @@ services:
       context: .
       dockerfile: docker/skills-engine.Dockerfile
     networks:
-      - secureclaw-net
+      - tessera-net
     environment:
       NODE_ENV: production
       SANDBOX_ADDR: "sandbox-runtime:19004"
@@ -175,7 +175,7 @@ services:
       context: .
       dockerfile: docker/memory-store.Dockerfile
     networks:
-      - secureclaw-net
+      - tessera-net
     environment:
       NODE_ENV: production
       MEMORY_DATA_DIR: /data/memory
@@ -203,7 +203,7 @@ services:
       context: .
       dockerfile: docker/sandbox-runtime.Dockerfile
     networks:
-      - secureclaw-net
+      - tessera-net
     environment:
       NODE_ENV: production
       # gVisor required in production — no escape hatch

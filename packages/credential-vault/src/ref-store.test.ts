@@ -10,7 +10,7 @@ let tmpDir: string;
 let store: RefStore;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), "secureclaw-refstore-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "tessera-refstore-"));
   store = new RefStore(tmpDir);
 });
 

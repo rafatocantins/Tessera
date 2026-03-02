@@ -1,4 +1,4 @@
-export class SecureClawError extends Error {
+export class TesseraError extends Error {
   readonly code: string;
   readonly context: Record<string, unknown>;
 
@@ -8,7 +8,7 @@ export class SecureClawError extends Error {
     context: Record<string, unknown> = {}
   ) {
     super(message);
-    this.name = "SecureClawError";
+    this.name = "TesseraError";
     this.code = code;
     this.context = context;
     // Maintain proper stack trace in V8 (available in Node.js)

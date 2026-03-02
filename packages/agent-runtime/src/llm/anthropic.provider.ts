@@ -2,7 +2,7 @@
  * anthropic.provider.ts — Anthropic Claude provider implementation.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import { estimateCostUsd, generateCallId } from "@secureclaw/shared";
+import { estimateCostUsd, generateCallId } from "@tessera/shared";
 import type {
   LLMProvider,
   LLMMessage,

@@ -104,7 +104,7 @@ export function generateEd25519KeyPair(): Ed25519KeyPair {
 
 /**
  * Sign data with an Ed25519 private key.
- * Used by the CLI `secureclaw skill sign` command when bundling a skill.
+ * Used by the CLI `tessera skill sign` command when bundling a skill.
  *
  * @param privateKeyHex  Hex-encoded PKCS8 DER private key from generateEd25519KeyPair()
  * @param data           Data to sign — the canonical JSON of the skill manifest

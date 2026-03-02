@@ -3,7 +3,7 @@
  *
  * Provides marketplace operations: publish, list, get, install.
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcPublishSkillRequest,
   GrpcPublishSkillResponse,
@@ -13,7 +13,7 @@ import type {
   GrpcGetMarketplaceSkillResponse,
   GrpcInstallFromMarketplaceRequest,
   GrpcInstallSkillResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 export class SkillsGrpcClient {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,7 +23,7 @@ export class SkillsGrpcClient {
     const target = addr ?? process.env["SKILLS_ADDR"] ?? "127.0.0.1:19005";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("skills.proto") as any;
-    const SkillsServiceClient = proto.secureclaw?.skills?.v1?.SkillsService as grpc.ServiceClientConstructor;
+    const SkillsServiceClient = proto.tessera?.skills?.v1?.SkillsService as grpc.ServiceClientConstructor;
     if (!SkillsServiceClient) {
       throw new Error("Failed to load SkillsService from skills.proto");
     }

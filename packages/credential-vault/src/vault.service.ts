@@ -4,7 +4,7 @@
  * Implements the VaultService gRPC interface.
  * Coordinates between the keychain adapter, ref store, injector, and scanner.
  */
-import { CredentialError } from "@secureclaw/shared";
+import { CredentialError } from "@tessera/shared";
 import { createKeychainAdapter } from "./keychain.adapter.js";
 import { RefStore } from "./ref-store.js";
 import { injectAllCredentials } from "./injector.js";

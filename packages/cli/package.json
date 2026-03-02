@@ -1,10 +1,10 @@
 {
-  "name": "@secureclaw/cli",
+  "name": "@tessera/cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "secureclaw": "./dist/bin.js"
+    "tessera": "./dist/bin.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/bin.js",
@@ -12,7 +12,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@secureclaw/shared": "workspace:*",
+    "@tessera/shared": "workspace:*",
     "commander": "^12.0.0"
   },
   "devDependencies": {

@@ -5,7 +5,7 @@
  * SetSecret is write-only: the value goes in, only a ref_id comes out.
  * All other operations work with opaque ref_id UUIDs.
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcSetSecretRequest,
   GrpcSetSecretResponse,
@@ -15,7 +15,7 @@ import type {
   GrpcSecretRef,
   GrpcGetSecretRefRequest,
   GrpcGetSecretRefResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 export class VaultGrpcClient {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +25,7 @@ export class VaultGrpcClient {
     const target = addr ?? process.env["VAULT_ADDR"] ?? "127.0.0.1:19002";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("vault.proto") as any;
-    const VaultServiceClient = proto.secureclaw?.vault?.v1?.VaultService as grpc.ServiceClientConstructor;
+    const VaultServiceClient = proto.tessera?.vault?.v1?.VaultService as grpc.ServiceClientConstructor;
     if (!VaultServiceClient) {
       throw new Error("Failed to load VaultService from vault.proto");
     }

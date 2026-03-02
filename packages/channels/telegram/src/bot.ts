@@ -1,5 +1,5 @@
 /**
- * bot.ts — Telegram channel adapter for SecureClaw.
+ * bot.ts — Telegram channel adapter for Tessera.
  *
  * Uses Telegraf (TypeScript-first Telegram bot framework).
  * Maintains one long-lived WebSocket per Telegram chat.
@@ -80,7 +80,7 @@ export class TelegramChannel {
           sessionId = await createSession(this.gatewayUrl, token);
         } catch (err) {
           await ctx.reply(
-            `Failed to connect to SecureClaw: ${err instanceof Error ? err.message : String(err)}`
+            `Failed to connect to Tessera: ${err instanceof Error ? err.message : String(err)}`
           );
           return;
         }

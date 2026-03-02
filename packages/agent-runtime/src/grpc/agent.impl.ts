@@ -23,7 +23,7 @@ import type {
   GrpcListSessionsResponse,
   GrpcListPendingApprovalsRequest,
   GrpcListPendingApprovalsResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 type UnaryCall<Req, Res> = grpc.ServerUnaryCall<Req, Res>;
 type StreamCall<Req, Res> = grpc.ServerWritableStream<Req, Res>;

@@ -28,13 +28,13 @@ export type { MarketplaceEntry, PublishResult } from "./marketplace.js";
 // ── Entry point ───────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const registryPath =
-    process.env["SKILLS_REGISTRY_PATH"] ?? "/tmp/secureclaw-skills-registry.json";
+    process.env["SKILLS_REGISTRY_PATH"] ?? "/tmp/tessera-skills-registry.json";
   const marketplacePath =
-    process.env["MARKETPLACE_REGISTRY_PATH"] ?? "/tmp/secureclaw-marketplace-registry.json";
+    process.env["MARKETPLACE_REGISTRY_PATH"] ?? "/tmp/tessera-marketplace-registry.json";
 
   process.stdout.write("[skills-engine] Starting Phase 2 skills engine\n");
   process.stdout.write(`[skills-engine] Registry path: ${registryPath}\n`);

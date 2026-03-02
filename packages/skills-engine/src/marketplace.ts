@@ -1,5 +1,5 @@
 /**
- * marketplace.ts — Community marketplace registry for SecureClaw skills.
+ * marketplace.ts — Community marketplace registry for Tessera skills.
  *
  * Skills are stored as signed manifest JSON strings.
  * All signatures are verified before publishing.

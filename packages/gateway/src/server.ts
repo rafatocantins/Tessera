@@ -1,5 +1,5 @@
 /**
- * server.ts — Fastify server factory for the SecureClaw gateway.
+ * server.ts — Fastify server factory for the Tessera gateway.
  *
  * SECURITY:
  * - Binds to 127.0.0.1 by default (loopback only)
@@ -12,7 +12,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCors from "@fastify/cors";
 import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyWebsocket from "@fastify/websocket";
-import type { GatewayConfig } from "@secureclaw/shared";
+import type { GatewayConfig } from "@tessera/shared";
 import { blockTokenInQueryParams } from "./plugins/auth.plugin.js";
 import { healthRoute } from "./routes/health.route.js";
 import { sessionsRoute } from "./routes/sessions.route.js";
@@ -23,6 +23,7 @@ import { credentialsRoute } from "./routes/credentials.route.js";
 import { complianceRoute } from "./routes/compliance.route.js";
 import { costsRoute } from "./routes/costs.route.js";
 import { marketplaceRoute } from "./routes/marketplace.route.js";
+import { tokenRoute } from "./routes/token.route.js";
 import type { AgentGrpcClient } from "./grpc/agent.client.js";
 import { AuditGrpcClient } from "./grpc/audit.client.js";
 import { VaultGrpcClient } from "./grpc/vault.client.js";
@@ -31,7 +32,7 @@ import { SkillsGrpcClient } from "./grpc/skills.client.js";
 export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcClient): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
-      level: process.env["SECURECLAW_LOG_LEVEL"] ?? "info",
+      level: process.env["TESSERA_LOG_LEVEL"] ?? "info",
       // Redact sensitive fields from logs
       redact: [
         "req.headers.authorization",
@@ -89,6 +90,7 @@ export async function buildServer(config: GatewayConfig, agentClient: AgentGrpcC
 
   // Register routes
   await app.register(healthRoute, { prefix: "/health" });
+  await app.register(tokenRoute, { prefix: "/api/v1/token" });
   await app.register(sessionsRoute, { prefix: "/api/v1/sessions" });
   const auditClient = new AuditGrpcClient();
   await app.register(chatRoute, {
@@ -125,7 +127,7 @@ export async function startServer(config: GatewayConfig, agentClient: AgentGrpcC
 
   app.log.info(
     { host: config.host, port: config.port },
-    "SecureClaw Gateway started"
+    "Tessera Gateway started"
   );
 
   if (config.host !== "127.0.0.1") {

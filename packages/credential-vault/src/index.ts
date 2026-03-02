@@ -10,13 +10,13 @@ export type { SecretRef } from "./ref-store.js";
 // ── Standalone server entry point ─────────────────────────────────────────
 const isMain = process.argv[1]?.endsWith("index.js");
 if (isMain) {
-  const { loadDotenv } = await import("@secureclaw/shared");
+  const { loadDotenv } = await import("@tessera/shared");
   loadDotenv();
 
   const { VaultService: Svc } = await import("./vault.service.js");
   const { startVaultGrpcServer: start } = await import("./grpc/server.js");
 
-  const dataDir = process.env["VAULT_DATA_DIR"] ?? "/tmp/secureclaw-vault";
+  const dataDir = process.env["VAULT_DATA_DIR"] ?? "/tmp/tessera-vault";
   const svc = new Svc(dataDir);
   await start(svc);
   process.stdout.write("[vault] Service ready\n");

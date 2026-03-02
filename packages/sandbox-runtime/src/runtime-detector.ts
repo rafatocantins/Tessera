@@ -3,13 +3,13 @@
  *
  * SECURITY: gVisor (runsc) is REQUIRED by default.
  * If gVisor is not available, the sandbox-runtime refuses to start unless
- * SECURECLAW_ALLOW_RUNC=true is explicitly set (development escape hatch ONLY).
+ * TESSERA_ALLOW_RUNC=true is explicitly set (development escape hatch ONLY).
  *
  * gVisor provides kernel-level isolation — each container gets its own
  * sandboxed kernel, preventing container escape vulnerabilities.
  */
 import Docker from "dockerode";
-import { SandboxError } from "@secureclaw/shared";
+import { SandboxError } from "@tessera/shared";
 
 export interface RuntimeInfo {
   gvisor_available: boolean;
@@ -22,7 +22,7 @@ export interface RuntimeInfo {
 /**
  * Detect the available container runtime.
  *
- * @throws {SandboxError} if gVisor is unavailable and SECURECLAW_ALLOW_RUNC is not set
+ * @throws {SandboxError} if gVisor is unavailable and TESSERA_ALLOW_RUNC is not set
  */
 export async function detectRuntime(): Promise<RuntimeInfo> {
   const docker = new Docker();
@@ -42,14 +42,14 @@ export async function detectRuntime(): Promise<RuntimeInfo> {
   const runtimes = (dockerInfo["Runtimes"] as Record<string, unknown> | undefined) ?? {};
   const gvisorAvailable = "runsc" in runtimes;
   const dockerVersion = (dockerInfo["ServerVersion"] as string | undefined) ?? "unknown";
-  const allowRunc = process.env["SECURECLAW_ALLOW_RUNC"] === "true";
+  const allowRunc = process.env["TESSERA_ALLOW_RUNC"] === "true";
 
   if (!gvisorAvailable && !allowRunc) {
     throw new SandboxError(
       "gVisor (runsc) is not available as a Docker runtime. " +
-      "SecureClaw requires gVisor for secure tool execution. " +
+      "Tessera requires gVisor for secure tool execution. " +
       "Install gVisor: https://gvisor.dev/docs/user_guide/install/ " +
-      "For development only: set SECURECLAW_ALLOW_RUNC=true to use runc (INSECURE — NOT for production).",
+      "For development only: set TESSERA_ALLOW_RUNC=true to use runc (INSECURE — NOT for production).",
       { docker_version: dockerVersion }
     );
   }

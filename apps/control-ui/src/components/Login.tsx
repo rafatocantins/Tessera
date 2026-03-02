@@ -46,7 +46,7 @@ export function Login({ onLogin }: LoginProps) {
   return (
     <div style={s.overlay}>
       <form style={s.card} onSubmit={(e) => void handleSubmit(e)}>
-        <h1 style={s.title}>SecureClaw</h1>
+        <h1 style={s.title}>Tessera</h1>
         <p style={s.subtitle}>Control UI — enter your gateway secret to continue</p>
 
         <label style={s.label} htmlFor="secret">

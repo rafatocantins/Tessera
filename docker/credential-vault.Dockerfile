@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# SecureClaw Credential Vault — multi-stage build, non-root UID 10001
+# Tessera Credential Vault — multi-stage build, non-root UID 10001
 # NOTE: keytar requires libsecret on Linux. In containers we use a
 # file-based fallback encrypted with VAULT_MASTER_KEY env var.
 FROM node:22-alpine AS base
@@ -11,21 +11,21 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/credential-vault/package.json packages/credential-vault/
-RUN pnpm install --frozen-lockfile --filter @secureclaw/credential-vault...
+RUN pnpm install --frozen-lockfile --filter @tessera/credential-vault...
 
 FROM deps AS build
 COPY packages/shared/ packages/shared/
 COPY packages/credential-vault/ packages/credential-vault/
 COPY tsconfig.base.json ./
-RUN pnpm --filter @secureclaw/shared build && \
-    pnpm --filter @secureclaw/credential-vault build
+RUN pnpm --filter @tessera/shared build && \
+    pnpm --filter @tessera/credential-vault build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
 RUN apk add --no-cache libsecret
 
-RUN addgroup -g 10001 secureclaw && \
-    adduser -u 10001 -G secureclaw -s /bin/sh -D secureclaw
+RUN addgroup -g 10001 tessera && \
+    adduser -u 10001 -G tessera -s /bin/sh -D tessera
 
 RUN mkdir -p /data/vault && chown -R 10001:10001 /data
 

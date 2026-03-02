@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# SecureClaw Gateway — multi-stage build, non-root UID 10001
+# Tessera Gateway — multi-stage build, non-root UID 10001
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -9,23 +9,23 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/gateway/package.json packages/gateway/
-RUN pnpm install --frozen-lockfile --filter @secureclaw/gateway...
+RUN pnpm install --frozen-lockfile --filter @tessera/gateway...
 
 # ── build stage ─────────────────────────────────────────────────────────────
 FROM deps AS build
 COPY packages/shared/ packages/shared/
 COPY packages/gateway/ packages/gateway/
 COPY tsconfig.base.json ./
-RUN pnpm --filter @secureclaw/shared build && \
-    pnpm --filter @secureclaw/gateway build
+RUN pnpm --filter @tessera/shared build && \
+    pnpm --filter @tessera/gateway build
 
 # ── runtime stage ───────────────────────────────────────────────────────────
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
 # Create non-root user (UID 10001)
-RUN addgroup -g 10001 secureclaw && \
-    adduser -u 10001 -G secureclaw -s /bin/sh -D secureclaw
+RUN addgroup -g 10001 tessera && \
+    adduser -u 10001 -G tessera -s /bin/sh -D tessera
 
 COPY --from=build --chown=10001:10001 /app/packages/shared/dist/ packages/shared/dist/
 COPY --from=build --chown=10001:10001 /app/packages/shared/package.json packages/shared/

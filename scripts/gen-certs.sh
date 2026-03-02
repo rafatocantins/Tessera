@@ -26,7 +26,7 @@ openssl genrsa -out "$CERT_DIR/ca.key" 4096 2>/dev/null
 openssl req -new -x509 -days 3650 \
   -key "$CERT_DIR/ca.key" \
   -out "$CERT_DIR/ca.crt" \
-  -subj "/CN=SecureClaw-CA/O=SecureClaw/OU=Internal" 2>/dev/null
+  -subj "/CN=Tessera-CA/O=Tessera/OU=Internal" 2>/dev/null
 echo "[cert-gen] CA certificate: $CERT_DIR/ca.crt"
 
 for SERVICE in "${SERVICES[@]}"; do
@@ -35,7 +35,7 @@ for SERVICE in "${SERVICES[@]}"; do
   openssl req -new \
     -key "$CERT_DIR/$SERVICE.key" \
     -out "$CERT_DIR/$SERVICE.csr" \
-    -subj "/CN=$SERVICE/O=SecureClaw/OU=Service" 2>/dev/null
+    -subj "/CN=$SERVICE/O=Tessera/OU=Service" 2>/dev/null
 
   # SAN extension: service name, localhost, and 127.0.0.1 so clients can connect via any of these
   cat > "$CERT_DIR/$SERVICE.ext" <<EOF

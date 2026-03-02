@@ -16,7 +16,7 @@ import {
   canonicalSkillPayload,
   verifyEd25519,
   type SkillManifest,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 // ── Result type ───────────────────────────────────────────────────────────
 

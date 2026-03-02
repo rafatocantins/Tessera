@@ -9,7 +9,7 @@ import type {
   Content,
   Part,
 } from "@google/generative-ai";
-import { estimateCostUsd, generateCallId } from "@secureclaw/shared";
+import { estimateCostUsd, generateCallId } from "@tessera/shared";
 import type {
   LLMProvider,
   LLMMessage,

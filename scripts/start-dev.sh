@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start-dev.sh — One-command local development startup for SecureClaw
+# start-dev.sh — One-command local development startup for Tessera
 #
 # Usage:
 #   bash scripts/start-dev.sh          # Start all services
@@ -44,7 +44,7 @@ for arg in "$@"; do
   esac
 done
 
-header "SecureClaw — Dev Startup"
+header "Tessera — Dev Startup"
 
 # ── 1. Prerequisites ───────────────────────────────────────────────────────
 header "1/5  Checking prerequisites"
@@ -77,8 +77,8 @@ ok "Docker Compose $(docker compose version --short)"
 if command -v runsc &>/dev/null; then
   ok "gVisor (runsc) found — full sandbox isolation available"
 else
-  warn "gVisor (runsc) not found — SECURECLAW_ALLOW_RUNC=true will be set (dev only)"
-  export SECURECLAW_ALLOW_RUNC=true
+  warn "gVisor (runsc) not found — TESSERA_ALLOW_RUNC=true will be set (dev only)"
+  export TESSERA_ALLOW_RUNC=true
 fi
 
 # ── 2. Environment ─────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ fi
 COMPOSE_CMD="docker compose -f docker-compose.dev.yml up $BUILD_FLAG"
 
 echo ""
-echo -e "${BOLD}Starting SecureClaw stack...${NC}"
+echo -e "${BOLD}Starting Tessera stack...${NC}"
 echo ""
 echo "  Services:"
 echo "    gateway        → http://127.0.0.1:${GATEWAY_PORT:-18789}"
@@ -170,7 +170,7 @@ echo "  Health check:"
 echo "    curl http://127.0.0.1:${GATEWAY_PORT:-18789}/health"
 echo ""
 echo "  Generate a token:"
-echo "    pnpm --filter '@secureclaw/cli' exec secureclaw token generate --user dev"
+echo "    pnpm --filter '@tessera/cli' exec tessera token generate --user dev"
 echo ""
 echo -e "  Press ${BOLD}Ctrl-C${NC} to stop all services."
 echo ""

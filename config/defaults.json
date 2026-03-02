@@ -38,13 +38,13 @@
     "max_tokens": 4096
   },
   "grpc": {
-    "cert_dir": "/etc/secureclaw/certs",
+    "cert_dir": "/etc/tessera/certs",
     "agent_runtime_addr": "127.0.0.1:19001",
     "vault_addr": "127.0.0.1:19002",
     "audit_addr": "127.0.0.1:19003",
     "sandbox_addr": "127.0.0.1:19004"
   },
   "tool_allowlist": [],
-  "workspace_dir": "~/.secureclaw/workspace",
-  "data_dir": "~/.secureclaw/data"
+  "workspace_dir": "~/.tessera/workspace",
+  "data_dir": "~/.tessera/data"
 }

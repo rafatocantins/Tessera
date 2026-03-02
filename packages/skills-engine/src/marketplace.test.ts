@@ -18,7 +18,7 @@ const cleanupPaths: string[] = [];
 function tmpPath(label = "mp"): string {
   const p = join(
     tmpdir(),
-    `secureclaw-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`
+    `tessera-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`
   );
   cleanupPaths.push(p);
   return p;

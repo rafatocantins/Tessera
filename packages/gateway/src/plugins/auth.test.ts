@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   generateGatewayToken,
   setGatewaySecret,
+  getGatewaySecret,
   verifyToken,
   blockTokenInQueryParams,
+  getTokenExpiryMs,
 } from "./auth.plugin.js";
 
 const SECRET = "test-gateway-secret";
@@ -41,6 +43,51 @@ function makeReq(
     userId: undefined,
   };
 }
+
+describe("getGatewaySecret", () => {
+  beforeEach(() => setGatewaySecret(""));
+  afterEach(() => setGatewaySecret(""));
+
+  it("returns empty string before any secret is set", () => {
+    expect(getGatewaySecret()).toBe("");
+  });
+
+  it("returns the secret after setGatewaySecret is called", () => {
+    setGatewaySecret("my-secret");
+    expect(getGatewaySecret()).toBe("my-secret");
+  });
+});
+
+describe("getTokenExpiryMs", () => {
+  afterEach(() => {
+    delete process.env["TOKEN_EXPIRY_SECONDS"];
+  });
+
+  it("defaults to 300 000 ms (5 minutes) when env var is not set", () => {
+    delete process.env["TOKEN_EXPIRY_SECONDS"];
+    expect(getTokenExpiryMs()).toBe(300_000);
+  });
+
+  it("returns the configured value when TOKEN_EXPIRY_SECONDS is set", () => {
+    process.env["TOKEN_EXPIRY_SECONDS"] = "3600";
+    expect(getTokenExpiryMs()).toBe(3_600_000);
+  });
+
+  it("clamps to minimum 30 seconds — ignores values below 30", () => {
+    process.env["TOKEN_EXPIRY_SECONDS"] = "5";
+    expect(getTokenExpiryMs()).toBe(300_000); // falls back to default
+  });
+
+  it("clamps to maximum 604800 seconds (7 days) — ignores values above", () => {
+    process.env["TOKEN_EXPIRY_SECONDS"] = "9999999";
+    expect(getTokenExpiryMs()).toBe(300_000); // falls back to default
+  });
+
+  it("ignores non-numeric values", () => {
+    process.env["TOKEN_EXPIRY_SECONDS"] = "not-a-number";
+    expect(getTokenExpiryMs()).toBe(300_000);
+  });
+});
 
 describe("generateGatewayToken", () => {
   it("produces a token with three dot-separated parts", () => {
@@ -137,7 +184,7 @@ describe("verifyToken", () => {
     expect((reply.body as { message: string }).message).toMatch(/timestamp/i);
   });
 
-  it("rejects a token older than 5 minutes (replay prevention)", async () => {
+  it("rejects a token older than the expiry window (replay prevention)", async () => {
     vi.useFakeTimers();
     const pastMs = Date.now() - 6 * 60 * 1000; // 6 minutes ago
     vi.setSystemTime(pastMs);
@@ -153,6 +200,28 @@ describe("verifyToken", () => {
 
     expect(reply.statusCode).toBe(401);
     expect((reply.body as { message: string }).message).toMatch(/expired/i);
+  });
+
+  it("accepts a token within a custom TOKEN_EXPIRY_SECONDS window", async () => {
+    process.env["TOKEN_EXPIRY_SECONDS"] = "3600"; // 1 hour
+    vi.useFakeTimers();
+    const pastMs = Date.now() - 10 * 60 * 1000; // 10 minutes ago
+    vi.setSystemTime(pastMs);
+    const token = generateGatewayToken("grace", SECRET);
+
+    // Move time forward 10 minutes — still within 1-hour window
+    vi.setSystemTime(pastMs + 10 * 60 * 1000);
+
+    const req = makeReq(`Bearer ${token}`);
+    const reply = makeReply();
+
+    await verifyToken(req as never, reply as never);
+
+    expect(reply.statusCode).toBe(200);
+    expect(req.userId).toBe("grace");
+
+    vi.useRealTimers();
+    delete process.env["TOKEN_EXPIRY_SECONDS"];
   });
 
   it("rejects a token signed with a different secret", async () => {

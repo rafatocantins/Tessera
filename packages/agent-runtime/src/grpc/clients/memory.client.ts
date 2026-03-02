@@ -7,7 +7,7 @@
  * getRecentMessages is on the critical path for session start (first turn only)
  * and has a 2-second timeout. It always resolves — never rejects.
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcStoreSessionRequest,
   GrpcAppendMessageRequest,
@@ -17,7 +17,7 @@ import type {
   GrpcStoredMessage,
   GrpcDeleteUserDataRequest,
   GrpcDeleteUserDataResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 import type { SessionContext } from "../../session/session-context.js";
 import type { LLMMessage } from "../../llm/provider.interface.js";
 
@@ -32,7 +32,7 @@ export class MemoryGrpcClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("memory.proto") as any;
     const MemoryServiceClient =
-      proto.secureclaw?.memory?.v1?.MemoryService as grpc.ServiceClientConstructor;
+      proto.tessera?.memory?.v1?.MemoryService as grpc.ServiceClientConstructor;
     if (!MemoryServiceClient) {
       throw new Error("Failed to load MemoryService from memory.proto");
     }

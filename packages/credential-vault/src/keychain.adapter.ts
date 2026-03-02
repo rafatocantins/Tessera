@@ -39,7 +39,7 @@ import { dirname, join } from "node:path";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export const KEYCHAIN_SERVICE_PREFIX = "SecureClaw";
+export const KEYCHAIN_SERVICE_PREFIX = "Tessera";
 
 export interface KeychainAdapter {
   /** Store a secret */
@@ -115,7 +115,7 @@ function decryptValue(stored: string, key: Buffer): string | null {
 type EncryptedStore = Record<string, string>;
 
 function keysFilePath(): string {
-  const dataDir = process.env["VAULT_DATA_DIR"] ?? "/tmp/secureclaw-vault";
+  const dataDir = process.env["VAULT_DATA_DIR"] ?? "/tmp/tessera-vault";
   return join(dataDir, "keys.enc.json");
 }
 
@@ -143,10 +143,10 @@ function saveStore(filePath: string, store: EncryptedStore): void {
  *
  * When keytar is available the OS secure store is used for each operation.
  * All keys are stored under the compound service name
- * `SecureClaw:<serviceName>` so they're grouped in the OS credential manager.
+ * `Tessera:<serviceName>` so they're grouped in the OS credential manager.
  *
  * When keytar is unavailable the encrypted file backend is used instead;
- * keys are stored as `SecureClaw:<serviceName>:<account>` in the JSON file.
+ * keys are stored as `Tessera:<serviceName>:<account>` in the JSON file.
  */
 export function createKeychainAdapter(serviceName: string): KeychainAdapter {
   const service = `${KEYCHAIN_SERVICE_PREFIX}:${serviceName}`;

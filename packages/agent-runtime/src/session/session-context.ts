@@ -7,7 +7,7 @@
  */
 import type { LLMMessage } from "../llm/provider.interface.js";
 import type { LLMProvider } from "../llm/provider.interface.js";
-import type { SessionDelimiters } from "@secureclaw/input-sanitizer";
+import type { SessionDelimiters } from "@tessera/input-sanitizer";
 
 export interface SessionContext {
   readonly session_id: string;

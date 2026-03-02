@@ -14,7 +14,7 @@ import { AgentLoop } from "./agent-loop.js";
 import { ToolPolicyEngine } from "../tools/policy-engine.js";
 import { ApprovalGate } from "../tools/approval-gate.js";
 import type { LLMProvider, LLMStreamChunk, LLMMessage } from "./provider.interface.js";
-import type { SanitizerService } from "@secureclaw/input-sanitizer";
+import type { SanitizerService } from "@tessera/input-sanitizer";
 import type { VaultGrpcClient } from "../grpc/clients/vault.client.js";
 import type { AuditGrpcClient } from "../grpc/clients/audit.client.js";
 import type { SandboxGrpcClient } from "../grpc/clients/sandbox.client.js";

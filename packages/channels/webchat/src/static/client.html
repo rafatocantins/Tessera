@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SecureClaw WebChat</title>
+  <title>Tessera WebChat</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src ws://127.0.0.1:18789 http://127.0.0.1:18789; style-src 'self' 'unsafe-inline';" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,14 +39,14 @@
 </head>
 <body>
   <header>
-    <h1>SecureClaw WebChat</h1>
+    <h1>Tessera WebChat</h1>
     <span id="status">disconnected</span>
   </header>
 
   <div id="setup">
-    <label for="token-input">Bearer Token (from `secureclaw token generate`)</label>
+    <label for="token-input">Bearer Token (from `tessera token generate`)</label>
     <input type="password" id="token-input" placeholder="paste your token here" autocomplete="off" />
-    <label for="session-input">Session ID (from `secureclaw session create`)</label>
+    <label for="session-input">Session ID (from `tessera session create`)</label>
     <input type="text" id="session-input" placeholder="session UUID" autocomplete="off" />
     <button id="connect-btn" onclick="connect()">Connect</button>
   </div>
@@ -84,7 +84,7 @@
         document.getElementById('setup').style.display = 'none';
         document.getElementById('input-area').style.display = 'flex';
         document.getElementById('message-input').focus();
-        addMessage('system', 'Connected to SecureClaw gateway.');
+        addMessage('system', 'Connected to Tessera gateway.');
       };
 
       ws.onmessage = (event) => {

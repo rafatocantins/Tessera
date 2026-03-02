@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.v1;
+package tessera.v1;
 
 // Common status codes used across all services
 enum StatusCode {

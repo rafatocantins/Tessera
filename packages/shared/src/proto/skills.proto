@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.skills.v1;
+package tessera.skills.v1;
 
 // SkillsService: versioned, signed tool bundle management.
 //
@@ -63,7 +63,7 @@ message InstallSkillResponse {
 // ── List ──────────────────────────────────────────────────────────────────
 
 message ListSkillsRequest {
-  // Optional namespace prefix filter, e.g. "secureclaw".
+  // Optional namespace prefix filter, e.g. "tessera".
   string namespace_filter = 1;
   // Optional tag filter — skill must have this tag to appear.
   string tag_filter = 2;

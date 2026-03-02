@@ -1,5 +1,5 @@
 /**
- * env.ts — minimal .env file loader for SecureClaw services.
+ * env.ts — minimal .env file loader for Tessera services.
  *
  * Reads `.env` from `process.cwd()` (the monorepo root when services are
  * started via `pnpm dev`). Only sets variables that are NOT already present

@@ -1,5 +1,5 @@
 /**
- * health.ts — `secureclaw health` — ping the gateway health endpoint.
+ * health.ts — `tessera health` — ping the gateway health endpoint.
  */
 import { Command } from "commander";
 

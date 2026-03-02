@@ -90,7 +90,7 @@ export async function costsRoute(
         const csv = header + rows;
 
         await reply
-          .header("Content-Disposition", 'attachment; filename="secureclaw-costs.csv"')
+          .header("Content-Disposition", 'attachment; filename="tessera-costs.csv"')
           .header("Content-Type", "text/csv")
           .send(csv);
       } catch (err) {

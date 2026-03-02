@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.memory.v1;
+package tessera.memory.v1;
 
 // MemoryService: persistent conversation memory across sessions.
 // Stores messages per user/session; supports FTS5 keyword search.

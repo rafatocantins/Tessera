@@ -7,7 +7,7 @@
  * mTLS: loads sandbox-runtime.crt / sandbox-runtime.key from GRPC_CERTS_DIR.
  * Falls back to insecure transport when certs are absent (dev mode).
  */
-import { loadProto, grpc, serverCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, serverCredentials } from "@tessera/shared";
 import type { SandboxService } from "../sandbox.service.js";
 import { makeSandboxImpl } from "./sandbox.impl.js";
 
@@ -16,7 +16,7 @@ export function startSandboxGrpcServer(sandboxSvc: SandboxService): Promise<grpc
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proto = loadProto("sandbox.proto") as any;
-  const SandboxServiceDef = proto.secureclaw?.sandbox?.v1?.SandboxService as grpc.ServiceClientConstructor;
+  const SandboxServiceDef = proto.tessera?.sandbox?.v1?.SandboxService as grpc.ServiceClientConstructor;
 
   if (!SandboxServiceDef) {
     throw new Error("Failed to load SandboxService from sandbox.proto");

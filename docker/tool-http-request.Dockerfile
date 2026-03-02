@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# secureclaw/http-request — minimal Alpine + Node.js fetch tool runner
+# tessera/http-request — minimal Alpine + Node.js fetch tool runner
 # Network mode is set to "bridge" (not "none") by the caller when this tool is used.
 FROM node:22-alpine
 

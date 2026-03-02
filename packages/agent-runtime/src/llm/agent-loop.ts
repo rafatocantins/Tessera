@@ -9,9 +9,9 @@
  * - Every tool call and result logged to the audit system
  */
 import { trace, context, SpanKind, SpanStatusCode } from "@opentelemetry/api";
-import { PolicyDeniedError, CostCapError } from "@secureclaw/shared";
-import type { SanitizerService } from "@secureclaw/input-sanitizer";
-import type { GrpcAgentChunk } from "@secureclaw/shared";
+import { PolicyDeniedError, CostCapError } from "@tessera/shared";
+import type { SanitizerService } from "@tessera/input-sanitizer";
+import type { GrpcAgentChunk } from "@tessera/shared";
 import type { SessionContext } from "../session/session-context.js";
 import {
   addUserMessage,
@@ -86,10 +86,10 @@ const TOOL_DEFINITIONS: LLMTool[] = [
 
 // Docker images for each tool (pre-approved images only)
 const TOOL_IMAGES: Record<string, string> = {
-  shell_exec: "secureclaw/shell-exec:latest",
-  http_request: "secureclaw/http-request:latest",
-  file_read: "secureclaw/file-read:latest",
-  file_write: "secureclaw/file-write:latest",
+  shell_exec: "tessera/shell-exec:latest",
+  http_request: "tessera/http-request:latest",
+  file_read: "tessera/file-read:latest",
+  file_write: "tessera/file-write:latest",
 };
 
 /** Maps tool_id → { skill_id, skill_version, requires_approval } for skill-backed tools */
@@ -162,14 +162,14 @@ export class AgentLoop {
       process.stderr.write(`[agent-loop] Could not check cost cap for user ${ctx.user_id} — proceeding\n`);
     }
 
-    const tracer = trace.getTracer("secureclaw-agent-runtime", "0.1.0");
+    const tracer = trace.getTracer("tessera-agent-runtime", "0.1.0");
 
     // Outer span covering the entire session — all child spans inherit this as parent
     const sessionSpan = tracer.startSpan("agent.session", {
       kind: SpanKind.INTERNAL,
       attributes: {
-        "secureclaw.session.id": ctx.session_id,
-        "secureclaw.user.id": ctx.user_id,
+        "tessera.session.id": ctx.session_id,
+        "tessera.user.id": ctx.user_id,
         "gen_ai.system": ctx.provider.provider_name,
         "gen_ai.request.model": ctx.provider.model_name,
       },
@@ -271,7 +271,7 @@ export class AgentLoop {
       }
 
       const systemPrompt = buildSecuritySystemPrompt({
-        agentName: "SecureClaw",
+        agentName: "Tessera",
         sessionId: ctx.session_id,
         sessionDelimiter: ctx.delimiters.open_tag,
         allowedToolIds: this.policyEngine.getAllowedToolIds(),
@@ -371,8 +371,8 @@ export class AgentLoop {
             });
 
             const approvalStart = Date.now();
-            const approvalSpan = tracer.startSpan("secureclaw.approval.wait", { kind: SpanKind.INTERNAL }, otelCtx);
-            approvalSpan.setAttributes({ "secureclaw.tool.id": tool_id, "secureclaw.call.id": call_id });
+            const approvalSpan = tracer.startSpan("tessera.approval.wait", { kind: SpanKind.INTERNAL }, otelCtx);
+            approvalSpan.setAttributes({ "tessera.tool.id": tool_id, "tessera.call.id": call_id });
             let approved: boolean;
             try {
               approved = await this.approvalGate.waitForApproval({
@@ -382,8 +382,8 @@ export class AgentLoop {
                 input_preview: inputPreview,
               });
               approvalSpan.setAttributes({
-                "secureclaw.approval.decision": approved ? "granted" : "denied",
-                "secureclaw.approval.duration_ms": Date.now() - approvalStart,
+                "tessera.approval.decision": approved ? "granted" : "denied",
+                "tessera.approval.duration_ms": Date.now() - approvalStart,
               });
             } catch (err) {
               approvalSpan.recordException(err instanceof Error ? err : new Error(String(err)));
@@ -436,7 +436,7 @@ export class AgentLoop {
           }
 
           const skillRoute = skillRoutes.get(tool_id);
-          const image = TOOL_IMAGES[tool_id] ?? `secureclaw/${tool_id}:latest`;
+          const image = TOOL_IMAGES[tool_id] ?? `tessera/${tool_id}:latest`;
 
           this.auditClient.logEvent({
             event_type: "TOOL_CALL",
@@ -454,12 +454,12 @@ export class AgentLoop {
           const startMs = Date.now();
           let toolResult: string;
           let toolSuccess = false;
-          const toolSpan = tracer.startSpan("secureclaw.tool.run", { kind: SpanKind.INTERNAL }, otelCtx);
+          const toolSpan = tracer.startSpan("tessera.tool.run", { kind: SpanKind.INTERNAL }, otelCtx);
           toolSpan.setAttributes({
-            "secureclaw.tool.id": tool_id,
-            "secureclaw.tool.image": skillRoute
+            "tessera.tool.id": tool_id,
+            "tessera.tool.image": skillRoute
               ? `skill:${skillRoute.skill_id}@${skillRoute.skill_version}`
-              : (TOOL_IMAGES[tool_id] ?? `secureclaw/${tool_id}:latest`),
+              : (TOOL_IMAGES[tool_id] ?? `tessera/${tool_id}:latest`),
           });
 
           try {
@@ -476,9 +476,9 @@ export class AgentLoop {
               const durationMs = Date.now() - startMs;
               toolSuccess = result.success;
               toolSpan.setAttributes({
-                "secureclaw.tool.exit_code": result.exit_code,
-                "secureclaw.tool.duration_ms": durationMs,
-                "secureclaw.tool.timed_out": result.timed_out,
+                "tessera.tool.exit_code": result.exit_code,
+                "tessera.tool.duration_ms": durationMs,
+                "tessera.tool.timed_out": result.timed_out,
               });
               toolResult = result.timed_out
                 ? `[TIMEOUT after ${durationMs}ms]`
@@ -523,15 +523,15 @@ export class AgentLoop {
               pids_limit: decision.resource_limits.pids_limit,
               network_mode: tool_id === "http_request" ? "restricted" : "none",
               // Named Docker volume: persists file_read/file_write data across tool calls
-              workspace_volume: `secureclaw-workspace-${ctx.session_id}`,
+              workspace_volume: `tessera-workspace-${ctx.session_id}`,
             });
 
             const durationMs = Date.now() - startMs;
             toolSuccess = result.exit_code === 0 && !result.timed_out;
             toolSpan.setAttributes({
-              "secureclaw.tool.exit_code": result.exit_code,
-              "secureclaw.tool.duration_ms": durationMs,
-              "secureclaw.tool.timed_out": result.timed_out,
+              "tessera.tool.exit_code": result.exit_code,
+              "tessera.tool.duration_ms": durationMs,
+              "tessera.tool.timed_out": result.timed_out,
             });
             toolResult = result.timed_out
               ? `[TIMEOUT after ${durationMs}ms]`

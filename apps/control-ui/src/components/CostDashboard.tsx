@@ -113,7 +113,7 @@ export function CostDashboard({ secret }: CostDashboardProps) {
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "secureclaw-costs.csv";
+      a.download = "tessera-costs.csv";
       a.click();
     } catch { /* ignore */ }
   }, [getToken, getRange]);

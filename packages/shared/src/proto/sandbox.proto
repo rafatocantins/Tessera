@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.sandbox.v1;
+package tessera.sandbox.v1;
 
 // SandboxService: secure tool execution via gVisor containers.
 // CRITICAL: All tool execution happens in isolated gVisor containers by default.

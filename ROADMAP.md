@@ -1,4 +1,4 @@
-# SecureClaw — Project Roadmap
+# Tessera — Project Roadmap
 
 ## Project goal
 
@@ -15,18 +15,18 @@ etc.) cut corners.
 
 | Component | Port | Notes |
 |---|---|---|
-| `@secureclaw/shared` | — | Zod schemas, proto loader, gRPC type interfaces |
-| `@secureclaw/credential-vault` | 19002 | AES-256-GCM file + keytar dual-backend |
-| `@secureclaw/audit-system` | 19003 | Append-only SQLite, tamper-resistant triggers |
-| `@secureclaw/input-sanitizer` | — | Heuristic + LLM injection classifier |
-| `@secureclaw/sandbox-runtime` | 19004 | gVisor container execution, resource limits |
-| `@secureclaw/agent-runtime` | 19001 | Session manager, policy engine, approval gate |
-| `@secureclaw/gateway` | 18789 | Fastify, HMAC auth, rate limiting, 127.0.0.1 only |
-| `@secureclaw/channel-webchat` | — | Static HTML + WebSocket chat client |
-| `@secureclaw/skills-engine` | 19005 | Ed25519-signed tool bundles, gRPC registry |
-| `@secureclaw/memory-store` | 19006 | SQLite + FTS5, session/message persistence |
-| `@secureclaw/control-ui` | 5173 | React dashboard (Vite) |
-| `@secureclaw/cli` | — | `secureclaw` CLI (token, session, skill) |
+| `@tessera/shared` | — | Zod schemas, proto loader, gRPC type interfaces |
+| `@tessera/credential-vault` | 19002 | AES-256-GCM file + keytar dual-backend |
+| `@tessera/audit-system` | 19003 | Append-only SQLite, tamper-resistant triggers |
+| `@tessera/input-sanitizer` | — | Heuristic + LLM injection classifier |
+| `@tessera/sandbox-runtime` | 19004 | gVisor container execution, resource limits |
+| `@tessera/agent-runtime` | 19001 | Session manager, policy engine, approval gate |
+| `@tessera/gateway` | 18789 | Fastify, HMAC auth, rate limiting, 127.0.0.1 only |
+| `@tessera/channel-webchat` | — | Static HTML + WebSocket chat client |
+| `@tessera/skills-engine` | 19005 | Ed25519-signed tool bundles, gRPC registry |
+| `@tessera/memory-store` | 19006 | SQLite + FTS5, session/message persistence |
+| `@tessera/control-ui` | 5173 | React dashboard (Vite) |
+| `@tessera/cli` | — | `tessera` CLI (token, session, skill) |
 | Telegram channel | — | Bot adapter (profile: channels) |
 | Slack channel | — | Socket Mode adapter (profile: channels) |
 | Integration tests | — | Docker Compose stack, mock LLM, E2E suite |
@@ -43,7 +43,7 @@ etc.) cut corners.
 | CLI `skill` commands (publish, list, install, installed) | ✅ complete |
 | Control UI: Compliance, Costs, Marketplace tabs | ✅ complete |
 | Dual-backend keychain (keytar + AES-256-GCM fallback) | ✅ complete |
-| Unit tests: 228 total | ✅ passing |
+| Unit tests: 266 total | ✅ passing |
 | Integration compose stack fixed (3-file chain, profiles) | ✅ complete |
 
 ### Security invariants (permanent, never relax)
@@ -51,7 +51,7 @@ etc.) cut corners.
 1. Gateway bound to 127.0.0.1 only
 2. HMAC auth on every authenticated route — no bypass
 3. Tokens in `Authorization` header only (query param → 401)
-4. gVisor required for tool execution (dev escape hatch: `SECURECLAW_ALLOW_RUNC=true`)
+4. gVisor required for tool execution (dev escape hatch: `TESSERA_ALLOW_RUNC=true`)
 5. LLM sees only `__VAULT_REF:id__` placeholders, never raw secrets
 6. Audit log: SQLite triggers block UPDATE/DELETE on `audit_events`
 
@@ -59,7 +59,7 @@ etc.) cut corners.
 
 ## Cross-cutting requirement: easy install & cross-platform
 
-> **Requirement:** SecureClaw must be easy to install, easy to test locally,
+> **Requirement:** Tessera must be easy to install, easy to test locally,
 > and must work on Windows, macOS, and Linux without extra steps.
 > This is a prerequisite for every other phase — there is no point building
 > enterprise features if developers cannot run the project in five minutes.
@@ -70,7 +70,7 @@ etc.) cut corners.
 |---|---|---|
 | **DX-A** ✅ | Replace `better-sqlite3` with built-in `node:sqlite` | Zero native compilation — no Visual Studio Build Tools, no prebuilt binary lookups; requires Node 22.13+ |
 | **DX-B** ✅ | `pnpm dev` single command via `concurrently` | Replaces 6 terminal tabs with one colour-coded command |
-| **DX-C** ✅ | `secureclaw init` wizard + `.env` support | Generates secrets, asks for API key, prints next steps — first chat in under 5 minutes from a clean clone |
+| **DX-C** ✅ | `tessera init` wizard + `.env` support | Generates secrets, asks for API key, prints next steps — first chat in under 5 minutes from a clean clone |
 | **DX-D** ✅ | GitHub Actions CI matrix (Windows × macOS × Linux × Node 20 / 22) | `.github/workflows/cross-platform.yml`: Node 22 = build+test on all 3 OS; Node 20 = build-only (node:sqlite unavailable) |
 
 ### Current problems
@@ -134,7 +134,7 @@ Estimated effort: 0.5 sessions.
 ### Phase DX-C — First-run setup wizard
 
 ```bash
-secureclaw init
+tessera init
 ```
 
 Interactive CLI that:
@@ -181,7 +181,7 @@ Before any Phase 2 work starts, the following must all be true:
 - [ ] `pnpm install && pnpm dev` works on Windows 11 (native, no WSL, no Build Tools)
 - [ ] `pnpm install && pnpm dev` works on macOS 14 (Apple Silicon)
 - [ ] `pnpm install && pnpm dev` works on Ubuntu 22.04 (no GUI, no libsecret)
-- [x] `secureclaw init` creates a valid `.env` and prints clear next steps (DX-C ✅)
+- [x] `tessera init` creates a valid `.env` and prints clear next steps (DX-C ✅)
 - [x] CI runs and passes on all three OS + Node 22 matrix (DX-D ✅)
 - [ ] First successful chat achievable in under 5 minutes from a clean clone
 
@@ -215,7 +215,7 @@ unlimited money. This phase adds:
 
 **Webhook alerting**
 
-New `@secureclaw/alerting` package (or module in gateway) that fires HTTP
+New `@tessera/alerting` package (or module in gateway) that fires HTTP
 webhooks on configurable events:
 
 | Trigger | Example payload |
@@ -235,7 +235,7 @@ Estimated effort: 2 sessions.
 The vault currently has a single master key (SHA-256 of `VAULT_MASTER_KEY`).
 If the key is compromised all secrets are exposed. This phase adds:
 
-- `secureclaw vault rotate-key --new-key <hex>` CLI command.
+- `tessera vault rotate-key --new-key <hex>` CLI command.
 - Rotation procedure: decrypt all entries with old key → re-encrypt with new
   key → atomic rename of the JSON file → update env var.
 - Key versioning: store `{"v":1, "key_id":"sha256-prefix", "entries":{...}}`
@@ -252,8 +252,8 @@ Estimated effort: 1 session.
 Export/import of all persistent state:
 
 ```
-secureclaw backup create --output backup-2026-02-26.tar.gz
-secureclaw backup restore --input backup-2026-02-26.tar.gz
+tessera backup create --output backup-2026-02-26.tar.gz
+tessera backup restore --input backup-2026-02-26.tar.gz
 ```
 
 Covers: audit DB, vault keys file, skills registry, marketplace registry,
@@ -262,19 +262,15 @@ the CLI orchestrates the sequence.
 
 Estimated effort: 2 sessions.
 
-### 2D — Configurable token expiry & refresh
+### 2D — Configurable token expiry & refresh ✅
 
-Tokens currently expire in 5 minutes (hardcoded). This is fine for testing but
-inconvenient in practice. Add:
-
-- `TOKEN_EXPIRY_SECONDS` env var (default: 300, max: 86400).
-- Refresh endpoint: `POST /api/v1/token/refresh` — accepts a valid (non-expired)
-  token, returns a new one with a fresh timestamp. No re-authentication needed.
-- CLI: `secureclaw token refresh --token <t>`.
-- Control UI: auto-refresh 60 s before expiry (background fetch, no visible
-  interruption).
-
-Estimated effort: 0.5 sessions.
+- `TOKEN_EXPIRY_SECONDS` env var (default: 300, range: 30–604800).
+- `GET /api/v1/token/config` — public endpoint returns `{ expiry_seconds }`.
+- `POST /api/v1/token/refresh` — accepts a valid token, returns a fresh one.
+- CLI: `tessera token refresh [--token <t>] [--url <url>]`.
+- Control UI: heartbeat interval at `(expiry_seconds - 60)s`; pings `/health`;
+  forces re-login if session expires. Green/amber/red dot in header.
+- 38 new gateway tests (auth plugin + token route); 266 total.
 
 ### 2E — Advanced injection detection
 
@@ -296,7 +292,7 @@ Estimated effort: 1.5 sessions.
 
 ## Phase 3 — Enterprise multi-tenancy
 
-Target: support multiple independent organisations on one SecureClaw instance.
+Target: support multiple independent organisations on one Tessera instance.
 Prerequisite: Phase 2 complete.
 
 ### 3A — RBAC (role-based access control)
@@ -320,9 +316,9 @@ Estimated effort: 2 sessions.
 Allow organisations to authenticate via their existing identity provider
 (Auth0, Okta, Azure AD, Google Workspace):
 
-- New `@secureclaw/auth-oidc` package: OIDC callback endpoint at
+- New `@tessera/auth-oidc` package: OIDC callback endpoint at
   `GET /api/v1/auth/callback`.
-- On successful OIDC login, exchange the ID token for a SecureClaw HMAC token
+- On successful OIDC login, exchange the ID token for a Tessera HMAC token
   (short-lived, role derived from OIDC claims / group membership).
 - Config: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` env vars.
 - Fallback: HMAC tokens still work for service accounts and CI.
@@ -335,7 +331,7 @@ Currently tool policy is hardcoded in `agent-runtime/src/index.ts`. Replace
 with a declarative YAML policy file:
 
 ```yaml
-# secureclaw-policy.yaml
+# tessera-policy.yaml
 default: deny
 tools:
   - id: file_read
@@ -353,7 +349,7 @@ tools:
 ```
 
 - Policy hot-reload: `SIGHUP` triggers policy reload without restart.
-- Validation: Zod schema + `secureclaw policy validate <file>` CLI command.
+- Validation: Zod schema + `tessera policy validate <file>` CLI command.
 - Audit: policy changes logged as `POLICY_UPDATED` events.
 
 Estimated effort: 1.5 sessions.
@@ -364,7 +360,7 @@ Stream audit events to external systems in real time:
 
 - **Webhook stream**: `POST` each event to a configured URL as it is inserted.
 - **Syslog**: RFC 5424 UDP/TCP syslog output (for Splunk, Elastic SIEM, etc.).
-- **File export**: `secureclaw audit export --format jsonl --from <date>` for
+- **File export**: `tessera audit export --format jsonl --from <date>` for
   bulk historical export.
 - Control UI: "Export audit log" button with date range picker.
 
@@ -402,7 +398,7 @@ Inspect LLM responses before they reach the user:
 
 ### 4B — Red team / adversarial testing framework
 
-- `secureclaw redteam run --scenario <file>` command: loads a YAML file of
+- `tessera redteam run --scenario <file>` command: loads a YAML file of
   adversarial prompts, runs them through the agent, reports which were blocked.
 - Built-in scenario library: prompt injection, jailbreak attempts, data
   exfiltration probes.
@@ -414,7 +410,7 @@ Inspect LLM responses before they reach the user:
 - Model tool policies as a finite state machine.
 - Use a lightweight model checker to verify that no sequence of tool calls can
   reach a forbidden state (e.g. "write to filesystem without prior approval").
-- `secureclaw policy verify <file>` — exits non-zero if policy has reachable
+- `tessera policy verify <file>` — exits non-zero if policy has reachable
   unsafe states.
 
 ### 4D — Skill provenance chain
@@ -423,7 +419,7 @@ Extend the marketplace with a full provenance chain:
 
 - Each published skill records: author key fingerprint, build timestamp, source
   repo hash, Trivy scan result, reviewer signatures (optional multi-sig).
-- `secureclaw skill inspect <ns/name>` prints the full provenance chain.
+- `tessera skill inspect <ns/name>` prints the full provenance chain.
 - Gateway can be configured to only install skills with `trivy_scan_passed=true`
   and at least one reviewer signature.
 
@@ -438,7 +434,7 @@ on all three major OS with a single command.
 |---|---|---|---|
 | 1 | Replace `better-sqlite3` with `@libsql/client` (cross-platform prebuilts) | ~2 sessions | DX-A |
 | 2 | ~~Add `pnpm dev` single-command start with `concurrently`~~ ✅ | done | DX-B |
-| 3 | ~~`secureclaw init` setup wizard + `.env` support in all services~~ ✅ | done | DX-C |
+| 3 | ~~`tessera init` setup wizard + `.env` support in all services~~ ✅ | done | DX-C |
 | 4 | GitHub Actions CI matrix (Windows / macOS / Linux × Node 20/22) | ~0.5 sessions | DX-D |
 | 5 | Add OTel spans to `agent-loop.ts` | ~1 session | Phase 1 (remaining) |
 | 6 | Configurable token expiry + refresh endpoint | ~0.5 sessions | Phase 2D |

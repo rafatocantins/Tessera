@@ -8,7 +8,7 @@
  * Injection attempts that try to "escape" the delimiter (e.g., by
  * reproducing it) are detectable because the delimiter is unguessable.
  */
-import { generateToken } from "@secureclaw/shared";
+import { generateToken } from "@tessera/shared";
 
 export interface SessionDelimiters {
   session_id: string;

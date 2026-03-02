@@ -3,12 +3,12 @@
  *
  * Used by AgentLoop to execute tools in isolated gVisor containers.
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcRunToolRequest,
   GrpcRunToolResponse,
   GrpcCheckRuntimeResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 export interface RunToolParams {
   call_id: string;
@@ -43,7 +43,7 @@ export class SandboxGrpcClient {
     const target = addr ?? process.env["SANDBOX_ADDR"] ?? "127.0.0.1:19004";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("sandbox.proto") as any;
-    const SandboxServiceClient = proto.secureclaw?.sandbox?.v1?.SandboxService as grpc.ServiceClientConstructor;
+    const SandboxServiceClient = proto.tessera?.sandbox?.v1?.SandboxService as grpc.ServiceClientConstructor;
     if (!SandboxServiceClient) {
       throw new Error("Failed to load SandboxService from sandbox.proto");
     }

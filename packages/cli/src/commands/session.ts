@@ -1,5 +1,5 @@
 /**
- * session.ts — `secureclaw session` subcommands.
+ * session.ts — `tessera session` subcommands.
  *
  * create  — POST /api/v1/sessions        → prints session_id
  * status  — GET  /api/v1/sessions/:id    → prints status JSON
@@ -29,7 +29,7 @@ function resolveToken(opts: { token?: string }): string {
   if (!token) {
     process.stderr.write(
       "error: bearer token required — pass --token or set GATEWAY_TOKEN\n" +
-      "       generate one with: secureclaw token generate --user <id> --secret <secret>\n"
+      "       generate one with: tessera token generate --user <id> --secret <secret>\n"
     );
     process.exit(1);
   }

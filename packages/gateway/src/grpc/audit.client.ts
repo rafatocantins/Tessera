@@ -4,7 +4,7 @@
  * The gateway only needs GetCostSummary to enforce the daily cost cap before
  * forwarding messages. Full audit logging is handled by agent-runtime.
  */
-import { loadProto, grpc, clientCredentials } from "@secureclaw/shared";
+import { loadProto, grpc, clientCredentials } from "@tessera/shared";
 import type {
   GrpcGetCostSummaryRequest,
   GrpcGetCostSummaryResponse,
@@ -14,7 +14,7 @@ import type {
   GrpcComplianceReportResponse,
   GrpcGetTeamCostSummaryRequest,
   GrpcGetTeamCostSummaryResponse,
-} from "@secureclaw/shared";
+} from "@tessera/shared";
 
 export interface CostSummary {
   total_cost_usd: number;
@@ -31,7 +31,7 @@ export class AuditGrpcClient {
     const target = addr ?? process.env["AUDIT_ADDR"] ?? "127.0.0.1:19003";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proto = loadProto("audit.proto") as any;
-    const AuditServiceClient = proto.secureclaw?.audit?.v1?.AuditService as grpc.ServiceClientConstructor;
+    const AuditServiceClient = proto.tessera?.audit?.v1?.AuditService as grpc.ServiceClientConstructor;
     if (!AuditServiceClient) {
       throw new Error("Failed to load AuditService from audit.proto");
     }

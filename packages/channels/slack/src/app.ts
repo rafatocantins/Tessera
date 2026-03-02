@@ -1,5 +1,5 @@
 /**
- * app.ts — Slack channel adapter for SecureClaw.
+ * app.ts — Slack channel adapter for Tessera.
  *
  * Uses @slack/bolt in Socket Mode (no public HTTP server required).
  * Maintains one long-lived WebSocket per Slack user.
@@ -99,7 +99,7 @@ export class SlackChannel {
           sessionId = await createSession(this.gatewayUrl, token);
         } catch (err) {
           await say({
-            text: `Failed to connect to SecureClaw: ${err instanceof Error ? err.message : String(err)}`,
+            text: `Failed to connect to Tessera: ${err instanceof Error ? err.message : String(err)}`,
           });
           return;
         }

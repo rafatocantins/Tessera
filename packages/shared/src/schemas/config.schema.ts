@@ -103,7 +103,7 @@ export type LLMProviderConfig = z.infer<typeof LLMProviderConfigSchema>;
 // gRPC address configuration
 // ---------------------------------------------------------------------------
 export const GrpcConfigSchema = z.object({
-  cert_dir: z.string().default("/etc/secureclaw/certs"),
+  cert_dir: z.string().default("/etc/tessera/certs"),
   agent_runtime_addr: z.string().default("127.0.0.1:19001"),
   vault_addr: z.string().default("127.0.0.1:19002"),
   audit_addr: z.string().default("127.0.0.1:19003"),
@@ -133,15 +133,15 @@ export type ToolPolicyEntry = z.infer<typeof ToolPolicyEntrySchema>;
 // ---------------------------------------------------------------------------
 // Root configuration
 // ---------------------------------------------------------------------------
-export const SecureClawConfigSchema = z.object({
+export const TesseraConfigSchema = z.object({
   version: z.literal("1"),
   security: SecurityConfigSchema,
   gateway: GatewayConfigSchema,
   llm: LLMProviderConfigSchema,
   grpc: GrpcConfigSchema,
   tool_allowlist: z.array(ToolPolicyEntrySchema).default([]),
-  workspace_dir: z.string().default("~/.secureclaw/workspace"),
-  data_dir: z.string().default("~/.secureclaw/data"),
+  workspace_dir: z.string().default("~/.tessera/workspace"),
+  data_dir: z.string().default("~/.tessera/data"),
 });
 
-export type SecureClawConfig = z.infer<typeof SecureClawConfigSchema>;
+export type TesseraConfig = z.infer<typeof TesseraConfigSchema>;

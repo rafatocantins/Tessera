@@ -1,6 +1,6 @@
-# SecureClaw — Testing & Usage Guide
+# Tessera — Testing & Usage Guide
 
-This guide covers everything you need to build, start, and test SecureClaw
+This guide covers everything you need to build, start, and test Tessera
 end-to-end on your own machine. The guide assumes **Node.js 22.13+**, **pnpm 9+**,
 and a terminal. Windows users: read the Windows-specific section below before
 starting.
@@ -37,7 +37,7 @@ starting.
 | pnpm | 9.x | `pnpm --version` |
 | Git | any | `git --version` |
 
-> **Why 22.13?** SecureClaw uses Node.js's built-in `node:sqlite` module
+> **Why 22.13?** Tessera uses Node.js's built-in `node:sqlite` module
 > (no native compilation, no `node-gyp`, no Visual Studio Build Tools).
 > This module is unflagged from Node.js 22.13 onwards.
 
@@ -45,10 +45,10 @@ Optional (for specific features):
 
 - **An Anthropic API key** — required to get real LLM responses.
   Without it the agent starts and connects, but all chat returns a provider
-  error. Set it via `secureclaw init` or in `.env`.
+  error. Set it via `tessera init` or in `.env`.
 - **Docker Desktop** — only needed for the sandbox runtime (tool execution)
   and for the Docker Compose production stack.
-- **Trivy** — only needed for `secureclaw skill publish --trivy`.
+- **Trivy** — only needed for `tessera skill publish --trivy`.
   Install from <https://trivy.dev>.
 
 ---
@@ -67,7 +67,7 @@ A clean build prints no errors and ends with all packages reporting `Done`.
 You can also run just one package:
 
 ```bash
-pnpm --filter '@secureclaw/gateway' build
+pnpm --filter '@tessera/gateway' build
 ```
 
 ---
@@ -80,7 +80,7 @@ Run these two commands in the repository root, **first time only**:
 
 ```bash
 # Generate secrets, create .env, and print next steps
-secureclaw init
+tessera init
 ```
 
 Follow the prompts:
@@ -114,9 +114,9 @@ Expected output (first few seconds):
 
 **Save the dev token printed by `[gw]`** — you will use it in every API call.
 
-If you skip `secureclaw init`, the gateway falls back to an insecure dev
+If you skip `tessera init`, the gateway falls back to an insecure dev
 default (`dev-insecure-change-me`) and prints a warning. Fine for local
-testing; run `secureclaw init` before any real use.
+testing; run `tessera init` before any real use.
 
 To start the backend services without the Vite UI:
 
@@ -155,8 +155,8 @@ node packages/skills-engine/dist/index.js
 
 **Agent runtime (port 19001)**
 ```bash
-# SECURECLAW_ALLOW_RUNC=true skips the gVisor requirement in dev
-SECURECLAW_ALLOW_RUNC=true node packages/agent-runtime/dist/index.js
+# TESSERA_ALLOW_RUNC=true skips the gVisor requirement in dev
+TESSERA_ALLOW_RUNC=true node packages/agent-runtime/dist/index.js
 ```
 
 **Gateway (port 18789)**
@@ -439,8 +439,8 @@ Download as CSV (for FinOps / spreadsheet tools):
 ```bash
 curl -s "http://127.0.0.1:18789/api/v1/costs/export" \
   -H "Authorization: Bearer $TOKEN" \
-  -o secureclaw-costs.csv
-cat secureclaw-costs.csv
+  -o tessera-costs.csv
+cat tessera-costs.csv
 ```
 
 CSV format:
@@ -471,7 +471,7 @@ Or use the CLI:
 ```bash
 node packages/cli/dist/bin.js skill list
 node packages/cli/dist/bin.js skill list --search web
-node packages/cli/dist/bin.js skill list --namespace secureclaw
+node packages/cli/dist/bin.js skill list --namespace tessera
 ```
 
 ### 11.2 Prepare a signed skill manifest
@@ -622,16 +622,16 @@ Approvals tab shows the tool call details. Click **Allow** to proceed or
 ## 13. CLI reference
 
 ```
-secureclaw init                                          # First-run wizard: secrets + .env
-secureclaw token generate --user <id> [--secret <s>]    # Generate a bearer token
-secureclaw health [--url <url>]                          # Check gateway health
-secureclaw session create [--provider anthropic] [--token <t>]
-secureclaw session status <sessionId>            [--token <t>]
-secureclaw session delete <sessionId>            [--token <t>]
-secureclaw skill list     [--search <q>] [--namespace <ns>] [--tag <t>]
-secureclaw skill publish  <manifest.json> [--trivy] [--token <t>]
-secureclaw skill install  <ns/name[@ver]>        [--token <t>]
-secureclaw skill installed                       [--token <t>]
+tessera init                                          # First-run wizard: secrets + .env
+tessera token generate --user <id> [--secret <s>]    # Generate a bearer token
+tessera health [--url <url>]                          # Check gateway health
+tessera session create [--provider anthropic] [--token <t>]
+tessera session status <sessionId>            [--token <t>]
+tessera session delete <sessionId>            [--token <t>]
+tessera skill list     [--search <q>] [--namespace <ns>] [--tag <t>]
+tessera skill publish  <manifest.json> [--trivy] [--token <t>]
+tessera skill install  <ns/name[@ver]>        [--token <t>]
+tessera skill installed                       [--token <t>]
 ```
 
 All commands accept `--url <base>` to target a non-default gateway address.
@@ -640,7 +640,7 @@ All commands accept `--url <base>` to target a non-default gateway address.
 
 Build the CLI first if needed:
 ```bash
-pnpm --filter '@secureclaw/cli' build
+pnpm --filter '@tessera/cli' build
 ```
 
 Run it directly:
@@ -651,7 +651,7 @@ node packages/cli/dist/bin.js --help
 Or install it globally:
 ```bash
 npm install -g packages/cli
-secureclaw --help
+tessera --help
 ```
 
 ---
@@ -667,11 +667,11 @@ pkill -f "packages/.*/dist/index.js"
 ```
 
 Data is persisted between restarts:
-- Vault secrets: `$VAULT_DATA_DIR/keys.enc.json` (default: `/tmp/secureclaw-vault/`)
-- Audit events: `$AUDIT_DATA_DIR/audit.db` (default: `/tmp/secureclaw-audit/`)
-- Memory: `$MEMORY_DATA_DIR/memory.db` (default: `/tmp/secureclaw-memory/`)
-- Skills registry: `$SKILLS_REGISTRY_PATH` (default: `/tmp/secureclaw-skills-registry.json`)
-- Marketplace: `$MARKETPLACE_REGISTRY_PATH` (default: `/tmp/secureclaw-marketplace-registry.json`)
+- Vault secrets: `$VAULT_DATA_DIR/keys.enc.json` (default: `/tmp/tessera-vault/`)
+- Audit events: `$AUDIT_DATA_DIR/audit.db` (default: `/tmp/tessera-audit/`)
+- Memory: `$MEMORY_DATA_DIR/memory.db` (default: `/tmp/tessera-memory/`)
+- Skills registry: `$SKILLS_REGISTRY_PATH` (default: `/tmp/tessera-skills-registry.json`)
+- Marketplace: `$MARKETPLACE_REGISTRY_PATH` (default: `/tmp/tessera-marketplace-registry.json`)
 
 ---
 
@@ -686,7 +686,7 @@ strongest credential security because keytar uses **Windows Credential Manager**
 1. Install **Node.js 22.13 LTS** from https://nodejs.org (choose the Windows installer).
 2. Install **pnpm**: `npm install -g pnpm`
 
-That's it. SecureClaw uses Node.js's **built-in** `node:sqlite` module — no
+That's it. Tessera uses Node.js's **built-in** `node:sqlite` module — no
 Visual Studio Build Tools, no Python, no `node-gyp`. Everything installs from
 pure JavaScript packages.
 
@@ -710,15 +710,15 @@ On first start the vault will use the Windows Credential Manager:
 ```
 
 Your credentials will appear in **Control Panel → Credential Manager →
-Windows Credentials** under names starting with `SecureClaw:`.
+Windows Credentials** under names starting with `Tessera:`.
 
 ### Environment variables in PowerShell
 
-The `.env` file created by `secureclaw init` is loaded automatically by all
+The `.env` file created by `tessera init` is loaded automatically by all
 services. If you need to override a value for a single run:
 
 ```powershell
-$env:SECURECLAW_ALLOW_RUNC = "true"
+$env:TESSERA_ALLOW_RUNC = "true"
 node packages\agent-runtime\dist\index.js
 ```
 
@@ -726,7 +726,7 @@ node packages\agent-runtime\dist\index.js
 
 Replace forward slashes with backslashes in file paths when running individual
 service commands. `pnpm dev` handles this automatically. The SQLite and JSON
-data files default to `%TEMP%\secureclaw-*` on Windows.
+data files default to `%TEMP%\tessera-*` on Windows.
 
 ---
 
@@ -779,7 +779,7 @@ docker compose down -v   # removes containers and volumes
 ```
 
 > **Note:** The Docker sandbox runtime requires gVisor (`runsc`) installed on
-> the host. Without it, set `SECURECLAW_ALLOW_RUNC=true` in the agent-runtime
+> the host. Without it, set `TESSERA_ALLOW_RUNC=true` in the agent-runtime
 > service environment — for development only.
 
 ---
@@ -788,11 +788,11 @@ docker compose down -v   # removes containers and volumes
 
 ```bash
 # All 228 tests (shared + audit-system + skills-engine + memory-store + agent-runtime)
-pnpm --filter '@secureclaw/shared' \
-     --filter '@secureclaw/audit-system' \
-     --filter '@secureclaw/skills-engine' \
-     --filter '@secureclaw/memory-store' \
-     --filter '@secureclaw/agent-runtime' \
+pnpm --filter '@tessera/shared' \
+     --filter '@tessera/audit-system' \
+     --filter '@tessera/skills-engine' \
+     --filter '@tessera/memory-store' \
+     --filter '@tessera/agent-runtime' \
      test
 ```
 
@@ -819,7 +819,7 @@ pnpm test
 
 | What | Command |
 |---|---|
-| **First-run setup** | `secureclaw init` |
+| **First-run setup** | `tessera init` |
 | Install dependencies | `pnpm install` |
 | Build everything | `pnpm -r build` |
 | **Start all services + UI** | `pnpm dev` |

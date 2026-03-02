@@ -9,7 +9,7 @@
  * - Per-session message rate limiting (sliding 60-second window)
  */
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { ClientMessageSchema, type ServerMessage } from "@secureclaw/shared";
+import { ClientMessageSchema, type ServerMessage } from "@tessera/shared";
 import { verifyToken } from "../plugins/auth.plugin.js";
 import type { AgentGrpcClient } from "../grpc/agent.client.js";
 import type { AuditGrpcClient } from "../grpc/audit.client.js";

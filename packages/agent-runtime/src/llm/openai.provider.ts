@@ -2,7 +2,7 @@
  * openai.provider.ts — OpenAI provider implementation.
  */
 import OpenAI from "openai";
-import { estimateCostUsd, generateCallId } from "@secureclaw/shared";
+import { estimateCostUsd, generateCallId } from "@tessera/shared";
 import type {
   LLMProvider,
   LLMMessage,

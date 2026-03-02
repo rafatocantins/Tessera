@@ -4,7 +4,7 @@
  * Matches the token format in packages/gateway/src/plugins/auth.plugin.ts:
  *   token = {userId}.{timestamp_ms}.{hmac_sha256_hex(secret, userId:timestamp)}
  *
- * Intentionally does NOT import from @secureclaw packages — the integration package
+ * Intentionally does NOT import from @tessera packages — the integration package
  * is standalone to avoid circular workspace dependencies.
  */
 import { createHmac } from "node:crypto";

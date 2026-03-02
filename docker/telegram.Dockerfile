@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# SecureClaw Telegram Channel — multi-stage build, non-root UID 10001
+# Tessera Telegram Channel — multi-stage build, non-root UID 10001
 # Outbound-only adapter (no EXPOSE, no data volume)
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -8,18 +8,18 @@ FROM base AS deps
 WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/channels/telegram/package.json packages/channels/telegram/
-RUN pnpm install --frozen-lockfile --filter @secureclaw/channel-telegram
+RUN pnpm install --frozen-lockfile --filter @tessera/channel-telegram
 
 FROM deps AS build
 COPY packages/channels/telegram/ packages/channels/telegram/
 COPY tsconfig.base.json ./
-RUN pnpm --filter @secureclaw/channel-telegram build
+RUN pnpm --filter @tessera/channel-telegram build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
-RUN addgroup -g 10001 secureclaw && \
-    adduser -u 10001 -G secureclaw -s /bin/sh -D secureclaw
+RUN addgroup -g 10001 tessera && \
+    adduser -u 10001 -G tessera -s /bin/sh -D tessera
 
 COPY --from=build --chown=10001:10001 /app/packages/channels/telegram/dist/ packages/channels/telegram/dist/
 COPY --from=build --chown=10001:10001 /app/packages/channels/telegram/package.json packages/channels/telegram/

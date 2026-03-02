@@ -1,12 +1,12 @@
-# SecureClaw Development Compose — extends docker-compose.yml
+# Tessera Development Compose — extends docker-compose.yml
 # Overrides for local development:
-# - SECURECLAW_ALLOW_RUNC=true (skip gVisor check if not installed)
+# - TESSERA_ALLOW_RUNC=true (skip gVisor check if not installed)
 # - Hot reload via volume mounts (source mapped in)
 # - Relaxed security for DX (still no 0.0.0.0 gateway exposure)
 # - Verbose logging
 
 networks:
-  secureclaw-net:
+  tessera-net:
     driver: bridge
     internal: false          # allow outbound for package installs in dev
   gateway-net:
@@ -50,19 +50,19 @@ services:
   skills-engine:
     environment:
       NODE_ENV: development
-      SECURECLAW_LOG_LEVEL: debug
+      TESSERA_LOG_LEVEL: debug
       SKILLS_REGISTRY_PATH: /data/skills/registry.json
 
   memory-store:
     environment:
       NODE_ENV: development
       MEMORY_DATA_DIR: /data/memory
-      SECURECLAW_LOG_LEVEL: debug
+      TESSERA_LOG_LEVEL: debug
 
   sandbox-runtime:
     environment:
       NODE_ENV: development
-      SECURECLAW_ALLOW_RUNC: "true"    # dev escape hatch: skip gVisor check
+      TESSERA_ALLOW_RUNC: "true"    # dev escape hatch: skip gVisor check
       LOG_LEVEL: debug
 
   channel-telegram:
@@ -70,7 +70,7 @@ services:
     environment:
       NODE_ENV: development
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
-      SECURECLAW_LOG_LEVEL: debug
+      TESSERA_LOG_LEVEL: debug
 
   channel-slack:
     profiles: ["channels"]
@@ -78,7 +78,7 @@ services:
       NODE_ENV: development
       SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
       SLACK_APP_TOKEN: "${SLACK_APP_TOKEN:-}"
-      SECURECLAW_LOG_LEVEL: debug
+      TESSERA_LOG_LEVEL: debug
 
 # ── Distributed Tracing (OpenTelemetry) ─────────────────────────────────────
 # Uncomment to enable distributed tracing with Jaeger:
@@ -89,7 +89,7 @@ services:
 #       - "127.0.0.1:16686:16686"   # Jaeger UI
 #       - "127.0.0.1:4318:4318"     # OTLP HTTP
 #     networks:
-#       - secureclaw-net
+#       - tessera-net
 #
 # Then add to agent-runtime environment:
 #     OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"

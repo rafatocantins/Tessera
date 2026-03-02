@@ -90,7 +90,7 @@ function scanRecursive(dirPath: string, result: ScanResult, depth: number): void
       if (FORBIDDEN_FILES.includes(name)) {
         result.errors.push(
           `PLAINTEXT_SECRET: .env file found at ${fullPath}. ` +
-          "Store credentials in the SecureClaw vault instead."
+          "Store credentials in the Tessera vault instead."
         );
         continue; // Still scan the file content
       }
@@ -114,7 +114,7 @@ function scanRecursive(dirPath: string, result: ScanResult, depth: number): void
         if (pattern.test(content)) {
           const message = `${patternName} pattern found in ${fullPath}`;
           if (isDefiniteSecret) {
-            result.errors.push(`PLAINTEXT_SECRET: ${message}. Use 'secureclaw vault set' to store securely.`);
+            result.errors.push(`PLAINTEXT_SECRET: ${message}. Use 'tessera vault set' to store securely.`);
           } else {
             result.warnings.push(`POTENTIAL_SECRET: ${message}`);
           }

@@ -1,5 +1,5 @@
 syntax = "proto3";
-package secureclaw.vault.v1;
+package tessera.vault.v1;
 
 // VaultService: secure credential management.
 // CRITICAL INVARIANT: Raw secret values are NEVER transmitted over gRPC.

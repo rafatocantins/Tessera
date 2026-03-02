@@ -4,13 +4,13 @@
  * SECURITY PROPERTIES:
  * - Tokens are ONLY accepted in the Authorization header (never query params)
  * - Constant-time comparison prevents timing attacks
- * - 5-minute replay window prevents token replay attacks
+ * - Configurable replay window (TOKEN_EXPIRY_SECONDS, default 300) prevents token replay
  * - No "localhost trust" — authentication is always required
  *
  * Token format: {userId}.{timestamp_ms}.{hmac_sha256(secret, userId:timestamp)}
  */
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { verifyHmac, signHmac, isExpired, nowUtcMs } from "@secureclaw/shared";
+import { verifyHmac, signHmac, isExpired, nowUtcMs } from "@tessera/shared";
 
 void isExpired; // Used in other modules
 
@@ -19,6 +19,23 @@ let gatewaySecret = "";
 
 export function setGatewaySecret(secret: string): void {
   gatewaySecret = secret;
+}
+
+export function getGatewaySecret(): string {
+  return gatewaySecret;
+}
+
+/**
+ * Returns the token expiry window in milliseconds.
+ * Reads TOKEN_EXPIRY_SECONDS from env (30–604800 range); defaults to 300s (5 minutes).
+ */
+export function getTokenExpiryMs(): number {
+  const val = process.env["TOKEN_EXPIRY_SECONDS"];
+  if (val) {
+    const n = parseInt(val, 10);
+    if (!isNaN(n) && n >= 30 && n <= 604800) return n * 1000;
+  }
+  return 5 * 60 * 1000; // default: 5 minutes
 }
 
 /**
@@ -69,9 +86,8 @@ export async function verifyToken(
     return;
   }
 
-  // Replay attack prevention: reject tokens older than 5 minutes
-  const FIVE_MINUTES_MS = 5 * 60 * 1000;
-  if (Math.abs(nowUtcMs() - timestamp) > FIVE_MINUTES_MS) {
+  // Replay attack prevention: reject tokens older than the configured expiry window
+  if (Math.abs(nowUtcMs() - timestamp) > getTokenExpiryMs()) {
     await reply.code(401).send({ error: "unauthorized", message: "Token expired or from the future" });
     return;
   }
